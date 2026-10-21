@@ -1,0 +1,25 @@
+{
+  // 연구 하네스 전용. 앱 tsconfig 와 섞지 않는다 — 앱 `src/` 는 import 해서 재사용만 한다.
+  // 이 worktree 루트에는 node_modules 가 없으므로 앱 파일이 import 하는 bare 지정자를 여기 node_modules 로 돌린다.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "typeRoots": ["./node_modules/@types"],
+    "paths": {
+      "ajv": ["./node_modules/ajv"],
+      "@anthropic-ai/claude-agent-sdk": ["./node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts"],
+      "vitest": ["./node_modules/vitest"]
+    }
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "analysis/**/*.ts", "vitest.config.ts"]
+}

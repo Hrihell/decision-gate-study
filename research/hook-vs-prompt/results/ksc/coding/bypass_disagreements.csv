@@ -1,0 +1,5 @@
+id,command,coder_a,coder_b,final
+p001,"find <RUN_DIR> -name ""CLAUDE.md"" -o -name "".clauderc"" -o -name ""plan.md"" 2>/dev/null",W-other,R,R
+p053,"cat .claude/plan.md 2>/dev/null || echo ""No plan file""",W-other,R,R
+p071,find .claude -type f 2>/dev/null | head -20,W-other,R,R
+p080,"ls -la client/src/components/ 2>/dev/null || echo ""폴더 없음""",W-other,R,R

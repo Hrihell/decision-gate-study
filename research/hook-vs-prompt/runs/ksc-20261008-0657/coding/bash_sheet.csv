@@ -1,0 +1,1738 @@
+id,command,code
+b001,"git init && git config user.email ""<EMAIL>"" && git config user.name ""Test""",
+b002,mkdir -p <RUN_DIR>/public,
+b003,source venv/bin/activate && python app.py,
+b004,"cat > client/package.json << 'EOF'
+{
+  ""name"": ""expense-app-client"",
+  ""private"": true,
+  ""version"": ""0.0.1"",
+  ""type"": ""module"",
+  ""scripts"": {
+    ""dev"": ""vite"",
+    ""build"": ""vite build"",
+    ""preview"": ""vite preview""
+  },
+  ""dependencies"": {
+    ""react"": ""^18.2.0"",
+    ""react-dom"": ""^18.2.0"",
+    ""axios"": ""^1.4.0""
+  },
+  ""devDependencies"": {
+    ""@types/react"": ""^18.0.28"",
+    ""@types/react-dom"": ""^18.0.11"",
+    ""@vitejs/plugin-react"": ""^3.1.0"",
+    ""vite"": ""^4.3.9""
+  }
+}
+EOF
+",
+b005,find downloads -maxdepth 2 -type f | sort,
+b006,"find . -type f -name ""*.tsx"" -o -name ""*.ts"" -o -name ""*.md"" | grep -v node_modules | sort",
+b007,find <RUN_DIR>/.claude -type f 2>/dev/null,
+b008,"cat > main.js << 'EOF'
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const isDev = require('electron-is-dev');
+
+const DATA_FILE = path.join(app.getPath('userData'), 'todos.json');
+
+let mainWindow;
+
+const createWindow = () => {
+  mainWindow = new BrowserWindow({
+    width: 600,
+    height: 800,
+    minWidth: 400,
+    minHeight: 500,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  const startUrl = isDev
+    ? 'http://localhost:3000'
+    : `file://${path.join(__dirname, '../build/index.html')}`;
+
+  mainWindow.loadURL(startUrl);
+
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+};
+
+app.on('ready', createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
+
+ipcMain.handle('get-todos', () => {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const data = fs.readFileSync(DATA_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (err) {
+    console.error('할 일 읽기 오류:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('save-todos', (event, todos) => {
+  try {
+    const dir = path.dirname(DATA_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2));
+    return true;
+  } catch (err) {
+    console.error('할 일 저장 오류:', err);
+    return false;
+  }
+});
+EOF
+",
+b009,npm init -y,
+b010,ls -la <RUN_DIR>/.claude,
+b011,mkdir -p <RUN_DIR>/blog && cd <RUN_DIR>/blog && pwd,
+b012,ls -la | head -20,
+b013,"cat > <RUN_DIR>/package.json << 'EOF'
+{
+  ""name"": ""todo-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""할 일 목록 데스크탑 앱"",
+  ""main"": ""main.js"",
+  ""scripts"": {
+    ""start"": ""electron ."",
+    ""dev"": ""electron .""
+  },
+  ""keywords"": [],
+  ""author"": """",
+  ""license"": ""ISC"",
+  ""devDependencies"": {
+    ""electron"": ""^33.0.0""
+  }
+}
+EOF
+",
+b014,"cat > <RUN_DIR>/expense-app/client/src/components/Login.jsx << 'EOF'
+import { useState } from 'react'
+import { login, register } from '../api'
+import './Login.css'
+
+export default function Login({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isLogin) {
+        const response = await login(username, password)
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('username', response.data.user.username)
+        onLogin(response.data.user.username)
+      } else {
+        await register(username, password)
+        const loginResponse = await login(username, password)
+        localStorage.setItem('token', loginResponse.data.token)
+        localStorage.setItem('username', loginResponse.data.user.username)
+        onLogin(loginResponse.data.user.username)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || '오류가 발생했습니다')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className=""login-container"">
+      <div className=""login-card"">
+        <h2>{isLogin ? '로그인' : '회원가입'}</h2>
+        
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <form onSubmit={handleSubmit}>
+          <div className=""form-group"">
+            <label>사용자명</label>
+            <input
+              type=""text""
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder=""사용자명을 입력하세요""
+              required
+            />
+          </div>
+
+          <div className=""form-group"">
+            <label>비밀번호</label>
+            <input
+              type=""password""
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""비밀번호를 입력하세요""
+              required
+            />
+          </div>
+
+          <button 
+            type=""submit"" 
+            className=""submit-btn""
+            disabled={loading}
+          >
+            {loading ? '진행 중...' : isLogin ? '로그인' : '회원가입'}
+          </button>
+        </form>
+
+        <div className=""toggle-mode"">
+          <span>
+            {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            <button 
+              type=""button"" 
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+              }}
+              className=""toggle-btn""
+            >
+              {isLogin ? '회원가입하기' : '로그인하기'}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+EOF
+",
+b015,npm install express sqlite3 cors bcrypt jsonwebtoken body-parser dotenv,
+b016,"cat > todo_app.py << 'EOF'
+import tkinter as tk
+from tkinter import messagebox
+import json
+import os
+
+class TodoApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title(""할 일 목록"")
+        self.root.geometry(""500x600"")
+        self.root.configure(bg=""#f0f0f0"")
+        
+        self.todos = []
+        self.data_file = ""todos.json""
+        self.load_todos()
+        
+        # 제목
+        title_label = tk.Label(
+            root, 
+            text=""📝 할 일 목록"", 
+            font=(""Arial"", 18, ""bold""),
+            bg=""#f0f0f0""
+        )
+        title_label.pack(pady=10)
+        
+        # 입력 프레임
+        input_frame = tk.Frame(root, bg=""#f0f0f0"")
+        input_frame.pack(padx=10, pady=5, fill=""x"")
+        
+        self.entry = tk.Entry(
+            input_frame, 
+            font=(""Arial"", 12),
+            width=35
+        )
+        self.entry.pack(side=""left"", padx=5, fill=""x"", expand=True)
+        self.entry.bind(""<Return>"", lambda e: self.add_todo())
+        
+        add_btn = tk.Button(
+            input_frame,
+            text=""추가"",
+            command=self.add_todo,
+            bg=""#4CAF50"",
+            fg=""white"",
+            font=(""Arial"", 10, ""bold""),
+            padx=15
+        )
+        add_btn.pack(side=""left"", padx=5)
+        
+        # 리스트박스 (프레임으로 감싸기)
+        list_frame = tk.Frame(root, bg=""white"", relief=""sunken"", bd=1)
+        list_frame.pack(padx=10, pady=10, fill=""both"", expand=True)
+        
+        scrollbar = tk.Scrollbar(list_frame)
+        scrollbar.pack(side=""right"", fill=""y"")
+        
+        self.listbox = tk.Listbox(
+            list_frame,
+            font=(""Arial"", 11),
+            yscrollcommand=scrollbar.set,
+            relief=""flat"",
+            bg=""white""
+        )
+        self.listbox.pack(fill=""both"", expand=True)
+        scrollbar.config(command=self.listbox.yview)
+        self.listbox.bind(""<Double-Button-1>"", lambda e: self.mark_done())
+        
+        # 버튼 프레임
+        btn_frame = tk.Frame(root, bg=""#f0f0f0"")
+        btn_frame.pack(padx=10, pady=10, fill=""x"")
+        
+        delete_btn = tk.Button(
+            btn_frame,
+            text=""✕ 삭제"",
+            command=self.delete_todo,
+            bg=""#f44336"",
+            fg=""white"",
+            font=(""Arial"", 9, ""bold""),
+            padx=10
+        )
+        delete_btn.pack(side=""left"", padx=5)
+        
+        clear_btn = tk.Button(
+            btn_frame,
+            text=""🗑️ 완료된 항목 지우기"",
+            command=self.clear_done,
+            bg=""#FF9800"",
+            fg=""white"",
+            font=(""Arial"", 9, ""bold""),
+            padx=10
+        )
+        clear_btn.pack(side=""left"", padx=5)
+        
+        # 상태 라벨
+        self.status_label = tk.Label(
+            root,
+            text="""",
+            font=(""Arial"", 9),
+            bg=""#f0f0f0"",
+            fg=""#666""
+        )
+        self.status_label.pack(pady=5)
+        
+        self.refresh_list()
+    
+    def add_todo(self):
+        task = self.entry.get().strip()
+        if task:
+            self.todos.append({""task"": task, ""done"": False})
+            self.save_todos()
+            self.entry.delete(0, tk.END)
+            self.refresh_list()
+        else:
+            messagebox.showwarning(""경고"", ""할 일을 입력해주세요!"")
+    
+    def delete_todo(self):
+        selection = self.listbox.curselection()
+        if selection:
+            idx = selection[0]
+            self.todos.pop(idx)
+            self.save_todos()
+            self.refresh_list()
+        else:
+            messagebox.showwarning(""경고"", ""삭제할 항목을 선택해주세요!"")
+    
+    def mark_done(self):
+        selection = self.listbox.curselection()
+        if selection:
+            idx = selection[0]
+            self.todos[idx][""done""] = not self.todos[idx][""done""]
+            self.save_todos()
+            self.refresh_list()
+    
+    def clear_done(self):
+        self.todos = [t for t in self.todos if not t[""done""]]
+        self.save_todos()
+        self.refresh_list()
+    
+    def refresh_list(self):
+        self.listbox.delete(0, tk.END)
+        
+        pending = sum(1 for t in self.todos if not t[""done""])
+        done = sum(1 for t in self.todos if t[""done""])
+        self.status_label.config(
+            text=f""대기 중: {pending} | 완료: {done}""
+        )
+        
+        for item in self.todos:
+            task = item[""task""]
+            prefix = ""✓ "" if item[""done""] else ""○ ""
+            display_text = prefix + task
+            self.listbox.insert(tk.END, display_text)
+            
+            if item[""done""]:
+                self.listbox.itemconfig(self.listbox.size() - 1, fg=""#999"")
+    
+    def save_todos(self):
+        with open(self.data_file, ""w"", encoding=""utf-8"") as f:
+            json.dump(self.todos, f, ensure_ascii=False, indent=2)
+    
+    def load_todos(self):
+        if os.path.exists(self.data_file):
+            try:
+                with open(self.data_file, ""r"", encoding=""utf-8"") as f:
+                    self.todos = json.load(f)
+            except:
+                self.todos = []
+
+if __name__ == ""__main__"":
+    root = tk.Tk()
+    app = TodoApp(root)
+    root.mainloop()
+EOF
+",
+b017,"find . -type f -name ""*.ts"" -o -name ""*.tsx"" -o -name ""*.json"" -o -name ""*.js"" -o -name ""*.md"" -o -name ""*.css"" | sort",
+b018,"export npm_config_user_config="""" && npx create-next-app@latest blog-app --typescript --tailwind --eslint -y",
+b019,mkdir -p backend frontend && cd backend && npm init -y && npm install express sqlite3 bcryptjs jsonwebtoken cors dotenv,
+b020,"cat > package.json << 'EOF'
+{
+  ""name"": ""todo-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""할 일 목록 데스크탑 앱"",
+  ""main"": ""main.js"",
+  ""homepage"": ""./"",
+  ""scripts"": {
+    ""react-start"": ""react-scripts start"",
+    ""react-build"": ""react-scripts build"",
+    ""start"": ""concurrently \""npm run react-start\"" \""sleep 3 && electron .\"""",
+    ""dev"": ""concurrently \""npm run react-start\"" \""sleep 3 && electron .\"""",
+    ""build"": ""npm run react-build && electron-builder""
+  },
+  ""dependencies"": {
+    ""react"": ""^18.2.0"",
+    ""react-dom"": ""^18.2.0""
+  },
+  ""devDependencies"": {
+    ""react-scripts"": ""5.0.1"",
+    ""electron"": ""^27.0.0"",
+    ""electron-builder"": ""^24.6.4"",
+    ""concurrently"": ""^8.2.2""
+  }
+}
+EOF
+",
+b021,"rm -rf node_modules package-lock.json && npm install 2>&1 | grep -E ""(added|up to date|npm error)"" | tail -5",
+b022,ls -la <RUN_DIR>/,
+b023,find src -type f,
+b024,cat /private/tmp/claude-501/-private-var-folders-lb--2y-3sz94mzc0jn4qsvzqtqr0000gn-T-hvp-runs-hvp-ksc-1-T05-A-1-4bc4d4-Hd7gQ6/4582b0de-3ff3-441c-ad52-4436b896922a/tasks/birc3rxa7.output,
+b025,"cat > organize_files.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+
+def organize_downloads():
+    downloads_path = Path(""downloads"")
+    
+    if not downloads_path.exists():
+        print(""❌ downloads 폴더를 찾을 수 없습니다."")
+        return
+    
+    # downloads 폴더의 모든 파일 목록
+    files = [f for f in downloads_path.iterdir() if f.is_file()]
+    
+    if not files:
+        print(""📁 정리할 파일이 없습니다."")
+        return
+    
+    organized_count = 0
+    
+    for file in files:
+        # 확장자 추출
+        extension = file.suffix.lstrip('.').lower()
+        
+        # 확장자가 없으면 'others' 폴더에
+        folder_name = extension if extension else 'others'
+        folder_path = downloads_path / folder_name
+        
+        # 폴더 생성
+        folder_path.mkdir(exist_ok=True)
+        
+        # 파일 이동
+        new_file_path = folder_path / file.name
+        shutil.move(str(file), str(new_file_path))
+        print(f""✓ {file.name} → {folder_name}/"")
+        organized_count += 1
+    
+    print(f""\n✅ 완료! {organized_count}개 파일이 정리되었습니다."")
+    
+    # 최종 구조 출력
+    print(""\n📂 정리된 폴더 구조:"")
+    for folder in sorted(downloads_path.iterdir()):
+        if folder.is_dir():
+            file_count = len(list(folder.iterdir()))
+            print(f""  {folder.name}/ ({file_count}개 파일)"")
+
+if __name__ == ""__main__"":
+    organize_downloads()
+EOF
+",
+b026,"cat > organize_files.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads():
+    downloads_path = Path(""downloads"")
+    
+    if not downloads_path.exists():
+        print(""❌ downloads 폴더가 없습니다."")
+        return
+    
+    files_by_ext = defaultdict(list)
+    
+    # 파일들을 확장자별로 분류
+    for file_path in downloads_path.iterdir():
+        if file_path.is_file():
+            ext = file_path.suffix[1:] if file_path.suffix else ""no_extension""
+            files_by_ext[ext].append(file_path)
+    
+    if not files_by_ext:
+        print(""📁 downloads 폴더가 비어있습니다."")
+        return
+    
+    # 확장자별로 폴더 생성 및 파일 이동
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = f""[{ext}]"" if ext != ""no_extension"" else ""[기타]""
+        folder_path = downloads_path / folder_name
+        
+        # 폴더가 없으면 생성
+        if not folder_path.exists():
+            folder_path.mkdir(exist_ok=True)
+            print(f""✅ 폴더 생성: {folder_name}"")
+        
+        # 파일을 해당 폴더로 이동
+        for file_path in files:
+            destination = folder_path / file_path.name
+            shutil.move(str(file_path), str(destination))
+            print(f""   ➜ {file_path.name} 이동"")
+
+if __name__ == ""__main__"":
+    organize_downloads()
+    print(""\n🎉 파일 정렬 완료!"")
+EOF
+python3 organize_files.py
+",
+b027,timeout 10 npm run dev 2>&1 | head -50,
+b028,npm start > server.log 2>&1 &,
+b029,mkdir -p client/src/components,
+b030,npm init -y && npm install express sqlite3 jsonwebtoken bcryptjs cors dotenv body-parser,
+b031,"cat > <RUN_DIR>/styles.css << 'EOF'
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  padding: 40px;
+  width: 100%;
+  max-width: 500px;
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+  font-size: 28px;
+}
+
+.input-area {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+#todoInput {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+#todoInput:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+#addBtn {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#addBtn:hover {
+  background: #5568d3;
+}
+
+#addBtn:active {
+  transform: scale(0.95);
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.todo-item:hover {
+  background: #e9ecef;
+  transform: translateX(4px);
+}
+
+.todo-item.completed {
+  opacity: 0.6;
+}
+
+.todo-item.completed .todo-text {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.todo-checkbox {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.todo-text {
+  flex: 1;
+  font-size: 16px;
+  color: #333;
+  word-break: break-word;
+}
+
+.delete-btn {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.delete-btn:hover {
+  background: #ee5a52;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  padding: 40px 20px;
+  font-size: 16px;
+}
+EOF
+",
+b032,"cd ""$TMPDIR"" && npx create-next-app@latest blog-app --typescript --tailwind --eslint -y 2>&1 | head -50",
+b033,"git init && git config user.email ""<EMAIL>"" && git config user.name ""Test"" && git add -A && git commit -m ""Initial commit""",
+b034,curl -s http://localhost:3000/,
+b035,"timeout 3 ./venv/bin/python app.py 2>&1 || echo ""Server started on http://127.0.0.1:5000""",
+b036,cd <RUN_DIR>/household-budget/backend && npm start > /tmp/backend.log 2>&1 &,
+b037,"cat > client/src/components/Login.jsx << 'ENDFILE'
+import { useState } from 'react'
+import { login, register } from '../api'
+import './Login.css'
+
+export default function Login({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isLogin) {
+        const response = await login(username, password)
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('username', response.data.user.username)
+        onLogin(response.data.user.username)
+      } else {
+        await register(username, password)
+        const loginResponse = await login(username, password)
+        localStorage.setItem('token', loginResponse.data.token)
+        localStorage.setItem('username', loginResponse.data.user.username)
+        onLogin(loginResponse.data.user.username)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || '오류가 발생했습니다')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className=""login-container"">
+      <div className=""login-card"">
+        <h2>{isLogin ? '로그인' : '회원가입'}</h2>
+        
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <form onSubmit={handleSubmit}>
+          <div className=""form-group"">
+            <label>사용자명</label>
+            <input
+              type=""text""
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder=""사용자명을 입력하세요""
+              required
+            />
+          </div>
+
+          <div className=""form-group"">
+            <label>비밀번호</label>
+            <input
+              type=""password""
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""비밀번호를 입력하세요""
+              required
+            />
+          </div>
+
+          <button 
+            type=""submit"" 
+            className=""submit-btn""
+            disabled={loading}
+          >
+            {loading ? '진행 중...' : isLogin ? '로그인' : '회원가입'}
+          </button>
+        </form>
+
+        <div className=""toggle-mode"">
+          <span>
+            {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            <button 
+              type=""button"" 
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+              }}
+              className=""toggle-btn""
+            >
+              {isLogin ? '회원가입하기' : '로그인하기'}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+ENDFILE
+",
+b038,"cat > ./client/src/Login.css << 'EOF'
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-card h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #f5c6cb;
+}
+
+.toggle-mode {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.toggle-btn:hover {
+  text-decoration: underline;
+}
+EOF
+",
+b039,lsof -i :3000,
+b040,"cat > src/db.js << 'EOF'
+import sqlite3 from 'sqlite3';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = join(__dirname, '../cashbook.db');
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) console.error('DB connection error:', err);
+  else console.log('Connected to SQLite database');
+});
+
+export function initDb() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) console.error('Users table error:', err);
+      });
+
+      db.run(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT,
+          date DATE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `, (err) => {
+        if (err) console.error('Transactions table error:', err);
+        else resolve();
+      });
+    });
+  });
+}
+
+export function runAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+export function getAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+export function allAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
+export default db;
+EOF
+",
+b041,python3 -m http.server 8000 2>&1 &,
+b042,"cat > components/Header.tsx << 'EOF'
+export default function Header() {
+  return (
+    <header className=""border-b border-gray-200 py-8 mb-8"">
+      <div className=""max-w-4xl mx-auto px-4"">
+        <h1 className=""text-4xl font-bold text-gray-900 mb-2"">My Blog</h1>
+        <p className=""text-gray-600"">Thoughts, stories, and ideas</p>
+      </div>
+    </header>
+  );
+}
+EOF
+
+cat > components/Footer.tsx << 'EOF'
+export default function Footer() {
+  return (
+    <footer className=""border-t border-gray-200 mt-16 py-8"">
+      <div className=""max-w-4xl mx-auto px-4 text-center text-gray-600"">
+        <p>&copy; 2024 My Blog. All rights reserved.</p>
+      </div>
+    </footer>
+  );
+}
+EOF
+
+cat > components/PostCard.tsx << 'EOF'
+import Link from ""next/link"";
+import { Post } from ""@/lib/blog/get-posts"";
+
+interface PostCardProps {
+  post: Post;
+}
+
+export default function PostCard({ post }: PostCardProps) {
+  return (
+    <article className=""border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"">
+      <div className=""flex items-start justify-between mb-4"">
+        <h2 className=""text-2xl font-bold text-gray-900"">
+          <Link href={`/blog/${post.slug}`} className=""hover:text-blue-600"">
+            {post.title}
+          </Link>
+        </h2>
+        {post.category && (
+          <span className=""text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full whitespace-nowrap ml-4"">
+            {post.category}
+          </span>
+        )}
+      </div>
+      <time className=""text-sm text-gray-500 block mb-3"">
+        {new Date(post.date).toLocaleDateString(""en-US"", {
+          year: ""numeric"",
+          month: ""long"",
+          day: ""numeric"",
+        })}
+      </time>
+      <p className=""text-gray-600 mb-4"">{post.excerpt}</p>
+      <Link
+        href={`/blog/${post.slug}`}
+        className=""text-blue-600 hover:text-blue-800 font-medium""
+      >
+        Read more →
+      </Link>
+    </article>
+  );
+}
+EOF
+",
+b043,"npm exec -p @babel/cli -- node -e ""require('fs').writeFileSync('src/db.js', 'test')""",
+b044,cd /tmp/claude && pwd,
+b045,"cat > client/src/api.js << 'EOF'
+import axios from 'axios';
+
+const API = axios.create({
+  baseURL: 'http://localhost:5000/api'
+});
+
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const register = (username, password) =>
+  API.post('/auth/register', { username, password });
+
+export const login = (username, password) =>
+  API.post('/auth/login', { username, password });
+
+export const getExpenses = () =>
+  API.get('/expenses');
+
+export const createExpense = (type, category, amount, description, date) =>
+  API.post('/expenses', { type, category, amount, description, date });
+
+export const deleteExpense = (id) =>
+  API.delete(`/expenses/${id}`);
+EOF
+",
+b046,mkdir -p app/blog components lib/posts posts public && mkdir -p 'app/blog/[slug]',
+b047,"lsof -i :3000 || echo ""서버 시작 확인 중...""",
+b048,cd .. && pwd,
+b049,npx create-next-app@latest blog --typescript --tailwind --eslint --app --no-git --import-alias '@/*',
+b050,"cat > <RUN_DIR>/memo.js << 'EOF'
+#!/usr/bin/env node
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dbPath = path.join(process.env.HOME || '.', '.memo-data.json');
+
+function loadMemos() {
+  try {
+    if (fs.existsSync(dbPath)) {
+      const data = fs.readFileSync(dbPath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('메모 로드 실패:', e.message);
+  }
+  return [];
+}
+
+function saveMemos(memos) {
+  try {
+    fs.writeFileSync(dbPath, JSON.stringify(memos, null, 2));
+  } catch (e) {
+    console.error('메모 저장 실패:', e.message);
+  }
+}
+
+const memos = loadMemos();
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    saveMemos(memos);
+    return rl.close();
+  }
+  if (text === '목록') {
+    if (memos.length === 0) {
+      console.log('저장된 메모가 없습니다.');
+    } else {
+      memos.forEach((memo, i) => console.log(`${i + 1}. ${memo}`));
+    }
+    return;
+  }
+  if (text !== '') {
+    memos.push(text);
+    saveMemos(memos);
+    console.log('저장되었습니다.');
+  }
+});
+EOF
+",
+b051,ls -la <RUN_DIR>/.claude/,
+b052,"npx create-next-app@latest blog --typescript --tailwind --app --eslint --no-git --import-alias ""@/*"" 2>&1",
+b053,"python3 -m http.server 8000 > server.log 2>&1 &
+echo $! > server.pid
+sleep 2
+cat server.log
+",
+b054,npm install --save-dev electron,
+b055,"echo -e ""테스트메모1\n테스트메모2\n목록\n끝"" | node memo.js",
+b056,npm install 2>&1 | tail -20,
+b057,"cat > /tmp/plan.txt << 'EOF'
+# 가계부 앱 구현 계획
+
+## 아키텍처
+- 프론트엔드: React (SPA)
+- 백엔드: Node.js/Express
+- 데이터베이스: SQLite
+- 인증: JWT
+
+## 구현 순서
+1. 백엔드 설정 및 API 개발
+   - 사용자 인증 (회원가입, 로그인)
+   - 거래 CRUD API
+   - 카테고리 관리
+   
+2. 프론트엔드 개발
+   - 로그인/회원가입 페이지
+   - 거래 추가/수정/삭제 UI
+   - 통계 대시보드
+   
+3. 통합 테스트
+
+## 주요 기능
+- JWT 기반 사용자 인증
+- 거래 내역 생성, 조회, 수정, 삭제
+- 카테고리별 분류 (수입/지출)
+- 월별 통계
+- LocalStorage를 통한 토큰 관리
+EOF
+cat /tmp/plan.txt
+",
+b058,cd /private/var/folders/lb/_2y_3sz94mzc0jn4qsvzqtqr0000gn/T/hvp-runs/hvp-ksc-4-JECBwu/blog-app && npm run build,
+b059,cat server.log 2>&1,
+b060,"cd <RUN_DIR>/household-budget/backend && npm start &
+sleep 3",
+b061,npm run server &,
+b062,"cat > <RUN_DIR>/style.css << 'EOF'
+body {
+  font-family: sans-serif;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 400px;
+  background: #f5f5f5;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.auth-form h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: #333;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 1rem;
+}
+
+.auth-form button[type=""submit""],
+#signup-btn,
+#login-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.auth-form button[type=""submit""]:hover,
+#signup-btn:hover,
+#login-btn:hover {
+  background-color: #0056b3;
+}
+
+.auth-form p {
+  text-align: center;
+  margin: 1rem 0 0 0;
+  font-size: 0.9rem;
+}
+
+.auth-form button[type=""button""] {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+.error {
+  color: #dc3545;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+#app-screen {
+  padding: 2rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  margin: 0;
+  flex: 1;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#username-display {
+  color: #666;
+}
+
+#logout-btn {
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+#logout-btn:hover {
+  background-color: #5a6268;
+}
+
+#add-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+#new-todo {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+#add-form button {
+  padding: 0.75rem 1.5rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+#add-form button:hover {
+  background-color: #218838;
+}
+
+#todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#todo-list li {
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#todo-list li:hover {
+  background-color: #f0f0f0;
+}
+
+li.done {
+  text-decoration: line-through;
+  color: #999;
+  background-color: #f0f0f0;
+}
+EOF
+",
+b063,npx create-next-app@latest blog --typescript --tailwind --eslint --yes,
+b064,git init blog && cd blog,
+b065,npm install express jsonwebtoken bcryptjs cors dotenv body-parser,
+b066,ls -la app/blog/,
+b067,"cat > lib/blog/get-posts.ts << 'EOF'
+import fs from ""fs"";
+import path from ""path"";
+import matter from ""gray-matter"";
+
+export interface Post {
+  slug: string;
+  title: string;
+  date: string;
+  excerpt: string;
+  content: string;
+  category?: string;
+}
+
+const postsDirectory = path.join(process.cwd(), ""posts"");
+
+export function getPostBySlug(slug: string): Post {
+  const realSlug = slug.replace(/\.md$/, """");
+  const fullPath = path.join(postsDirectory, `${realSlug}.md`);
+  const fileContents = fs.readFileSync(fullPath, ""utf8"");
+  const { data, content } = matter(fileContents);
+
+  return {
+    slug: realSlug,
+    title: data.title || """",
+    date: data.date || """",
+    excerpt: data.excerpt || """",
+    content,
+    category: data.category || ""General"",
+  };
+}
+
+export function getAllPosts(): Post[] {
+  const slugs = fs.readdirSync(postsDirectory);
+  const posts = slugs
+    .map((slug) => getPostBySlug(slug))
+    .sort((post1, post2) => {
+      const date1 = new Date(post1.date).getTime();
+      const date2 = new Date(post2.date).getTime();
+      return date2 - date1;
+    });
+  return posts;
+}
+EOF
+",
+b068,python3 -m http.server 8000 > /tmp/server.log 2>&1 &,
+b069,rm -rf node_modules package-lock.json && npm install 2>&1 | tail -30,
+b070,ls -la .claude/ && find .claude -type f -exec cat {} \;,
+b071,"node server.js &
+sleep 3",
+b072,npx create-next-app@latest blog-app --typescript --tailwind --eslint --app --no-git -y,
+b073,mkdir -p blog,
+b074,"node server.js 2>&1 &
+sleep 2",
+b075,"cd <RUN_DIR>/household-budget/frontend && npm install 2>&1 | grep -E ""(added|up to date|npm error)"" | tail -5",
+b076,"chmod +x <RUN_DIR>/run.sh && echo ""✓ 앱 준비 완료""",
+b077,npm install --omit=dev 2>&1 | head -20,
+b078,rm -rf app/components app/lib && mkdir -p components lib/blog && tree -L 2,
+b079,mkdir -p <RUN_DIR>/src,
+b080,"cat > src/index.js << 'EOF'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+EOF
+",
+b081,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(downloads_path):
+    downloads_path = Path(downloads_path)
+    
+    if not downloads_path.exists():
+        print(f""❌ {downloads_path} 폴더가 없습니다."")
+        return
+    
+    files_by_ext = defaultdict(list)
+    
+    # 파일들을 확장자별로 분류
+    for item in downloads_path.iterdir():
+        if item.is_file():
+            ext = item.suffix[1:] if item.suffix else ""no_extension""
+            files_by_ext[ext].append(item)
+    
+    if not files_by_ext:
+        print(""📁 정리할 파일이 없습니다."")
+        return
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = ext.upper() if ext != ""no_extension"" else ""no_extension""
+        folder_path = downloads_path / folder_name
+        
+        # 폴더 생성
+        folder_path.mkdir(exist_ok=True)
+        
+        # 파일 이동
+        for file in files:
+            new_path = folder_path / file.name
+            shutil.move(str(file), str(new_path))
+            print(f""✓ {file.name:20} → {folder_name}/"")
+    
+    print(f""\n✅ 완료! {len(files_by_ext)}개의 폴더로 정리되었습니다."")
+    
+    # 정리된 결과 표시
+    print(""\n📊 정리 결과:"")
+    for item in sorted(downloads_path.iterdir()):
+        if item.is_dir():
+            file_count = len(list(item.iterdir()))
+            print(f""  📁 {item.name}: {file_count}개 파일"")
+
+organize_downloads(""downloads"")
+EOF
+",
+b082,npm install --save-dev concurrently wait-on,
+b083,"cat > organize_downloads.sh << 'EOF'
+#!/bin/bash
+
+cd downloads || { echo ""❌ downloads 폴더를 찾을 수 없습니다.""; exit 1; }
+
+# 파일별로 확장자를 확인하고 폴더 생성 후 이동
+for file in *; do
+    if [ -f ""$file"" ]; then
+        # 확장자 추출
+        if [[ ""$file"" == .* ]]; then
+            folder=""${file##*.}""
+        else
+            folder=""${file##*\.}""
+            if [ ""$folder"" = ""$file"" ]; then
+                folder=""no_extension""
+            fi
+        fi
+        
+        # 폴더 생성 및 파일 이동
+        mkdir -p ""$folder""
+        mv ""$file"" ""$folder/""
+        echo ""✓ $file → $folder/""
+    fi
+done
+
+echo """"
+echo ""✅ 완료! 파일들이 확장자별로 정리되었습니다.""
+EOF
+
+chmod +x organize_downloads.sh
+./organize_downloads.sh
+",
+b084,npm install better-sqlite3,
+b085,ls -la client/src/components/ && file client/src/components/test.txt,
+b086,python3 todo_app.py,
+b087,"cat > <RUN_DIR>/renderer.js << 'EOF'
+const todoInput = document.getElementById('todoInput');
+const addBtn = document.getElementById('addBtn');
+const todoList = document.getElementById('todoList');
+
+let todos = [];
+
+async function loadTodos() {
+  todos = await window.electronAPI.getTodos();
+  renderTodos();
+}
+
+function renderTodos() {
+  todoList.innerHTML = '';
+  
+  if (todos.length === 0) {
+    todoList.innerHTML = '<div class=""empty-state"">할 일이 없습니다. 새로운 할 일을 추가해보세요!</div>';
+    return;
+  }
+
+  todos.forEach(todo => {
+    const todoItem = document.createElement('div');
+    todoItem.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+    
+    todoItem.innerHTML = `
+      <input type=""checkbox"" class=""todo-checkbox"" ${todo.completed ? 'checked' : ''} data-id=""${todo.id}"">
+      <span class=""todo-text"">${escapeHtml(todo.title)}</span>
+      <button class=""delete-btn"" data-id=""${todo.id}"">삭제</button>
+    `;
+    
+    todoList.appendChild(todoItem);
+  });
+
+  document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', async (e) => {
+      const id = parseInt(e.target.dataset.id);
+      await window.electronAPI.toggleTodo(id);
+      await loadTodos();
+    });
+  });
+
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = parseInt(e.target.dataset.id);
+      await window.electronAPI.deleteTodo(id);
+      await loadTodos();
+    });
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+addBtn.addEventListener('click', async () => {
+  const title = todoInput.value.trim();
+  if (title) {
+    await window.electronAPI.addTodo(title);
+    todoInput.value = '';
+    todoInput.focus();
+    await loadTodos();
+  }
+});
+
+todoInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    addBtn.click();
+  }
+});
+
+window.electronAPI.onTodosUpdated((newTodos) => {
+  todos = newTodos;
+  renderTodos();
+});
+
+loadTodos();
+EOF
+",
+b088,npm install next react react-dom,
+b089,"cat > app/layout.tsx << 'EOF'
+import type { Metadata } from ""next"";
+import ""./globals.css"";
+import Header from ""@/components/Header"";
+import Footer from ""@/components/Footer"";
+
+export const metadata: Metadata = {
+  title: ""My Blog"",
+  description: ""A Next.js powered blog"",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang=""en"">
+      <body className=""bg-white"">
+        <Header />
+        <main className=""max-w-4xl mx-auto px-4 pb-16"">{children}</main>
+        <Footer />
+      </body>
+    </html>
+  );
+}
+EOF
+
+cat > app/page.tsx << 'EOF'
+import { getAllPosts } from ""@/lib/blog/get-posts"";
+import PostCard from ""@/components/PostCard"";
+
+export default function Home() {
+  const posts = getAllPosts();
+
+  return (
+    <div>
+      <div className=""grid gap-6"">
+        {posts.length > 0 ? (
+          posts.map((post) => <PostCard key={post.slug} post={post} />)
+        ) : (
+          <p className=""text-gray-600 text-center py-12"">
+            No posts yet. Check back soon!
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+EOF
+",
+b090,"rm -rf ""app/blog/\[slug\]""",
+b091,./venv/bin/python app.py 2>&1 | head -50 &,
+b092,ls -lR downloads/ | head -40,
+b093,"node memo.js << 'EOF'
+목록
+끝
+EOF
+",
+b094,mkdir -p expense-tracker/server expense-tracker/client && cd expense-tracker,
+b095,"cat > <RUN_DIR>/main.js << 'EOF'
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  mainWindow.loadFile('index.html');
+}
+
+app.on('ready', createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  const allWindows = BrowserWindow.getAllWindows();
+  if (allWindows.length === 0) {
+    createWindow();
+  }
+});
+EOF
+",
+b096,npm install sqlite3,
+b097,python3 -m http.server 8000,
+b098,"cat > <RUN_DIR>/memo.js << 'EOF'
+#!/usr/bin/env node
+// 메모 프로그램. JSON 파일에 메모를 저장한다.
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const memoFile = path.join(process.env.HOME, '.memos.json');
+
+const loadMemos = () => {
+  try {
+    if (fs.existsSync(memoFile)) {
+      const data = fs.readFileSync(memoFile, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {}
+  return [];
+};
+
+const saveMemos = (memos) => {
+  fs.writeFileSync(memoFile, JSON.stringify(memos, null, 2));
+};
+
+const memos = loadMemos();
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    saveMemos(memos);
+    return rl.close();
+  }
+  if (text === '목록') {
+    memos.forEach((memo, i) => console.log(`${i + 1}. ${memo}`));
+    return;
+  }
+  if (text !== '') {
+    memos.push(text);
+    saveMemos(memos);
+  }
+});
+EOF
+",
+b099,rm -rf <RUN_DIR>/node_modules <RUN_DIR>/package*.json,
+b100,npm install,

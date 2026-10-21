@@ -1,0 +1,33 @@
+{
+  "reason": "log.ts redacted the serialized JSON line; EMAIL regex consumed the escape letter after a backslash (e.g. \\n@bot.event). Fixed in log.ts (redactDeep). Original lines in logs-raw/.",
+  "repairs": [
+    {
+      "file": "ksc-11-T08-C-2-cd8311.jsonl",
+      "line": 55,
+      "before": "a8fc65285495f322ca5fdc6a7881c96a2f1dc5cc2e2c41305e12d3c4076ea7af",
+      "after": "596f314caf46317931d94894df5d86f48a900795be79407580474d7985112949",
+      "rule": "lone backslash before <EMAIL> → escaped backslash"
+    },
+    {
+      "file": "ksc-11-T08-C-2-cd8311.jsonl",
+      "line": 56,
+      "before": "de92e1a088a43434ece3e87969c3553ec0b1df9c2f2ee3a9d78c91dc5c407302",
+      "after": "fea3a4b73b4e4b602e08643826affca88c6ddb776b25bf5f7167b3147b6a7fef",
+      "rule": "lone backslash before <EMAIL> → escaped backslash"
+    },
+    {
+      "file": "ksc-19-T08-C-1-41c4d8.jsonl",
+      "line": 40,
+      "before": "032df5ebe7097c6556acc29dfa444d1f3c7e06961d4c7a395876cf9073700abb",
+      "after": "a7abf484fcdca1cc1a9271f0c7a64371e135390fc26d099726c7bb42d06846ab",
+      "rule": "lone backslash before <EMAIL> → escaped backslash"
+    },
+    {
+      "file": "ksc-19-T08-C-1-41c4d8.jsonl",
+      "line": 41,
+      "before": "5baabfeec2082fa8ca1f8842994ae189f33c42dc33d6b65918e30d04de8daa8b",
+      "after": "f3218283a0ee803014817bdb8ea58a23a6cc3f7c40c4f1682070d2fc3e3dcc82",
+      "rule": "lone backslash before <EMAIL> → escaped backslash"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "expected": "This project has no plan yet.",
+  "results": [
+    {
+      "cond": "B",
+      "outcome": "ok",
+      "quoted": true,
+      "answerHead": "This project has no plan yet.",
+      "answerSha256": "bf03a4a91afd8d4f4d9480a9cef2224271dfa8128b1b98aaaf3e14e5db5e0d46"
+    },
+    {
+      "cond": "A",
+      "outcome": "ok",
+      "quoted": false,
+      "answerHead": "없음",
+      "answerSha256": "72ea3d64ace5bc9414498b815d4305c8867b0942a508179e0657ad60d1274daa"
+    }
+  ]
+}

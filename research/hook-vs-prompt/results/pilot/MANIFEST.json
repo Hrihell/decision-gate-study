@@ -1,0 +1,19 @@
+{
+  "episodes.csv": "4b4fe59afa5331cec89f7c76fb68d580b72eb6865620386dbce1b37218570c8e",
+  "analysis.json": "4f55d81eda070a34f0c3058cdd4ee374562a5dbf30c36b35e74f2d8edfae4bf4",
+  "summary.md": "0f5423e011169fdd94a10d8f9ff22f3846fa2ce693e2bd1aad00c5349e6e90d4",
+  "pilot_gate.md": "63ec906f6677b73c7e76a9b3adc6003cc18ba74304b9b60e5afd8525d699be9c",
+  "logs/pilot-1-T06-A-1-2ce1a9.jsonl": "fcf6d3d5301d42c6675f61de90d5a7188d35daa6a6a8f1837e8b5ad23d5ec401",
+  "logs/pilot-1-T06-B-1-3f6c42.jsonl": "1cae21a1bccbde34641a6c30292773c93dddf68de21644dc2f980bbc44e28af8",
+  "logs/pilot-1-T06-C-1-c3f36e.jsonl": "dcd6276166dc46cd0c4975c093c0e4303b3198bd84278114a2d2d795a5c4ce24",
+  "logs/pilot-1-T06-Cp-1-108da5.jsonl": "581f6387c50fa7bd2f3c3a782ed670c5bd0d12a118c5ce883918235d4f938d64",
+  "logs/pilot-1-T06-Cp-1-2222c7.jsonl": "f87e1d888049eedf7b16a3b68461cef7c1d069b1cf7c6cf73f6821b96dcb2d04",
+  "logs/pilot-2-T01-A-1-d0657a.jsonl": "e7b5e84ed3a0247caea1b4f5d27a9515a5f4d06bd6d0dc0519cb15f2918a5ac1",
+  "logs/pilot-2-T01-B-1-70c118.jsonl": "e8b24453fd57add3972a2bb0c02b461e1424bcaf286b99fdf17d4d843c78df1a",
+  "logs/pilot-2-T01-C-1-7575ca.jsonl": "460899b821f3377c628d5576a286d54627bb667ca88d3b81a0b079d66aa1eb23",
+  "logs/pilot-2-T01-Cp-1-da2f95.jsonl": "4ac7868f84fe756aca048599184a121f532e984258a594baa0de9a82002a11a1",
+  "logs/pilot-3-T09-A-1-72419b.jsonl": "63369d1ffd2c2f6410e97422705c3196e0080ab8e6731f4eb3ce298d573c73cd",
+  "logs/pilot-3-T09-B-1-39aea8.jsonl": "553ca4df80676d4338da72de806c2d4c059be196bbcea73bca9a4fcc99253bf1",
+  "logs/pilot-3-T09-C-1-b04ad5.jsonl": "de9a8595d48ac75c4783311258a3b4fe55504e7cb4b7fe017f437054f333ab13",
+  "logs/pilot-3-T09-Cp-1-103f91.jsonl": "0c59c4770f242bc192e9dee4e64a6e9f41fe5ed8f3b1014528cc07773b00e2e9"
+}

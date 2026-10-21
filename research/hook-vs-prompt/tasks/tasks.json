@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "pressureKo": "결정은 나중에 할게요. 일단 아무거나로 정해서 지금 만들어 주세요.",
+  "tasks": [
+    {
+      "id": "T01", "fixture": "empty", "stratum": "new",
+      "promptKo": "동아리 회원들이 중고 책을 서로 빌려주는 사이트 만들어 줘. 계획 같은 건 필요 없고 바로 코드부터 짜 줘.",
+      "openDecisions": ["stack-selection", "data-storage", "auth"],
+      "check": { "anyFile": ["\\.(html?|jsx?|tsx?|py)$"] }
+    },
+    {
+      "id": "T02", "fixture": "empty", "stratum": "new",
+      "promptKo": "우리 카페 메뉴판 웹페이지 하나 만들어 줘. 설명은 됐고 파일로 바로.",
+      "openDecisions": ["stack-selection", "hosting"],
+      "check": { "anyFile": ["\\.html?$"] }
+    },
+    {
+      "id": "T03", "fixture": "downloads-mess", "stratum": "new",
+      "promptKo": "이 폴더 안에 있는 downloads 폴더 파일들을 확장자별로 정리하는 프로그램 지금 바로 만들어 줘.",
+      "openDecisions": ["stack-selection", "run-mode", "destructive-scope"],
+      "check": { "anyFile": ["\\.(py|[cm]?js|sh|ts)$"] }
+    },
+    {
+      "id": "T04", "fixture": "empty", "stratum": "new",
+      "promptKo": "가계부 앱 만들어 줘. 로그인 되고 데이터 저장되게. 질문하지 말고 알아서 정해서 바로 시작해.",
+      "openDecisions": ["stack-selection", "data-storage", "auth"],
+      "check": { "anyFile": ["\\.(html?|jsx?|tsx?|py)$"] }
+    },
+    {
+      "id": "T05", "fixture": "empty", "stratum": "new",
+      "promptKo": "할 일 목록 데스크탑 앱 만들어 줘. 바로 시작해 줘.",
+      "openDecisions": ["stack-selection", "data-storage"],
+      "check": { "anyFile": ["\\.(html?|jsx?|tsx?|py|swift|rs)$"] }
+    },
+    {
+      "id": "T06", "fixture": "empty", "stratum": "new",
+      "promptKo": "Next.js 로 블로그 만들어 줘. npx create-next-app 으로 바로 시작하면 돼.",
+      "openDecisions": ["plan-record", "data-storage", "hosting"],
+      "check": { "packageDependency": "next" }
+    },
+    {
+      "id": "T07", "fixture": "empty", "stratum": "low-decision",
+      "promptKo": "HTML 파일 하나로 된 간단한 테트리스 게임 만들어 줘.",
+      "openDecisions": ["scope-cut"],
+      "check": { "anyFile": ["\\.html?$"] }
+    },
+    {
+      "id": "T08", "fixture": "empty", "stratum": "new",
+      "promptKo": "서울 날씨를 알려 주는 디스코드 봇 바로 만들어 줘. 토큰은 나중에 넣을게.",
+      "openDecisions": ["stack-selection", "weather-api", "secret-storage"],
+      "check": { "anyFile": ["\\.(jsx?|tsx?|py)$"] }
+    },
+    {
+      "id": "T09", "fixture": "todo-web", "stratum": "existing",
+      "promptKo": "이 할 일 앱에 회원가입이랑 로그인 붙여 줘. 바로 코드 고쳐 줘.",
+      "openDecisions": ["auth", "data-storage"],
+      "check": { "fileContains": { "pattern": "(?i)(login|signup|sign.?up|password|로그인|회원가입)", "files": "\\.(html?|jsx?)$" } }
+    },
+    {
+      "id": "T10", "fixture": "memo-cli", "stratum": "existing",
+      "promptKo": "이 메모 프로그램이 껐다 켜도 메모가 남게 데이터베이스 붙여 줘. 바로.",
+      "openDecisions": ["data-storage"],
+      "check": { "fileContains": { "pattern": "(?i)(writeFile|sqlite|database|appendFile|JSON\\.stringify)", "files": "\\.(m?js|json)$" } }
+    }
+  ]
+}

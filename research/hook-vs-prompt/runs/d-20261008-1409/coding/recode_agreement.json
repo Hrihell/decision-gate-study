@@ -1,0 +1,30 @@
+{
+  "bypass": {
+    "categories": {
+      "n": 7,
+      "agree": 7,
+      "observed": 1,
+      "kappa": 1
+    },
+    "writeOrNot": {
+      "n": 7,
+      "agree": 7,
+      "observed": 1,
+      "kappa": null
+    }
+  },
+  "prog": {
+    "DEC": {
+      "n": 60,
+      "agree": 59,
+      "observed": 0.9833333333333333,
+      "kappa": 0.8484848484848482
+    },
+    "UI": {
+      "n": 60,
+      "agree": 59,
+      "observed": 0.9833333333333333,
+      "kappa": 0.9137931034482756
+    }
+  }
+}

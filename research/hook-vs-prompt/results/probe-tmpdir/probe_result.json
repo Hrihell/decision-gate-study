@@ -1,0 +1,20 @@
+{
+  "kind": "tmpdir",
+  "expected": "TMPDIR is automatically set to the correct sandbox-writable directory",
+  "results": [
+    {
+      "cond": "A",
+      "outcome": "ok",
+      "quoted": true,
+      "answerHead": "For temporary files, always use the `$TMPDIR` environment variable. TMPDIR is automatically set to the correct sandbox-writable directory in sandbox mode. Do NOT use `/tmp` directly - use `$TMPDIR` in",
+      "answerSha256": "38835e614774c70c39f133accb07382db8bf7d84c462acfbc6b66c6ba5fdd0c5"
+    },
+    {
+      "cond": "E",
+      "outcome": "ok",
+      "quoted": true,
+      "answerHead": "For temporary files, always use the `$TMPDIR` environment variable. TMPDIR is automatically set to the correct sandbox-writable directory in sandbox mode. Do NOT use `/tmp` directly - use `$TMPDIR` in",
+      "answerSha256": "38835e614774c70c39f133accb07382db8bf7d84c462acfbc6b66c6ba5fdd0c5"
+    }
+  ]
+}

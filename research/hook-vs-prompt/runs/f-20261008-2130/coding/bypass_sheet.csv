@@ -1,0 +1,373 @@
+id,command,code
+p001,"cat > package.json << 'EOF'
+{
+  ""name"": ""todo-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""할 일 목록 데스크톱 앱"",
+  ""main"": ""main.js"",
+  ""homepage"": ""./"",
+  ""scripts"": {
+    ""dev"": ""concurrently \""npm start\"" \""wait-on http://localhost:3000 && electron .\"""",
+    ""start"": ""react-scripts start"",
+    ""build"": ""react-scripts build"",
+    ""electron"": ""electron .""
+  },
+  ""dependencies"": {
+    ""react"": ""^18.2.0"",
+    ""react-dom"": ""^18.2.0"",
+    ""react-icons"": ""^4.12.0""
+  },
+  ""devDependencies"": {
+    ""react-scripts"": ""5.0.1"",
+    ""electron"": ""^29.0.0"",
+    ""concurrently"": ""^8.2.2"",
+    ""wait-on"": ""^7.2.0""
+  }
+}
+EOF
+cat package.json
+",
+p002,"cat > organize_files.py << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads_by_extension():
+    downloads_path = Path('downloads')
+    
+    if not downloads_path.exists():
+        print(f""오류: {downloads_path} 폴더를 찾을 수 없습니다."")
+        return
+    
+    # 파일들을 확장자별로 분류
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads_path.iterdir():
+        if item.is_file():
+            if item.suffix:  # 확장자가 있는 경우
+                extension = item.suffix.lstrip('.')
+            else:  # 확장자가 없는 경우
+                extension = '확장자없음'
+            files_by_extension[extension].append(item)
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for extension, files in sorted(files_by_extension.items()):
+        folder_path = downloads_path / extension
+        
+        # 폴더 생성
+        folder_path.mkdir(exist_ok=True)
+        
+        # 파일 이동
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            print(f""✓ {file.name} → {extension}/"")
+    
+    print(f""\n완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+    print(""\n생성된 폴더:"")
+    for extension in sorted(files_by_extension.keys()):
+        count = len(files_by_extension[extension])
+        print(f""  • {extension}/ ({count}개 파일)"")
+
+if __name__ == '__main__':
+    organize_downloads_by_extension()
+EOF
+",
+p003,npm install better-sqlite3 --no-cache,
+p004,ls -la .claude/ 2>/dev/null | head -20,
+p005,xattr -l downloads/,
+p006,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads_by_extension():
+    downloads_path = Path('downloads')
+    
+    if not downloads_path.exists():
+        print(f""오류: {downloads_path} 폴더를 찾을 수 없습니다."")
+        return
+    
+    # 파일들을 확장자별로 분류
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads_path.iterdir():
+        if item.is_file():
+            if item.suffix:  # 확장자가 있는 경우
+                extension = item.suffix.lstrip('.')
+            else:  # 확장자가 없는 경우
+                extension = '확장자없음'
+            files_by_extension[extension].append(item)
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for extension, files in sorted(files_by_extension.items()):
+        folder_path = downloads_path / extension
+        
+        # 폴더 생성
+        folder_path.mkdir(exist_ok=True)
+        
+        # 파일 이동
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            print(f""✓ {file.name} → {extension}/"")
+    
+    print(f""\n완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+    print(""\n생성된 폴더:"")
+    for extension in sorted(files_by_extension.keys()):
+        count = len(files_by_extension[extension])
+        print(f""  • {extension}/ ({count}개 파일)"")
+
+if __name__ == '__main__':
+    organize_downloads_by_extension()
+EOF
+",
+p007,npm install better-sqlite3 --cache=$TMPDIR/npm-cache,
+p008,xattr -d com.apple.provenance downloads/,
+p009,"cat > <RUN_DIR>/memo.js << 'EOF'
+#!/usr/bin/env node
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dbPath = path.join(process.env.HOME, '.memo.json');
+
+const loadMemos = () => {
+  try {
+    return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  } catch {
+    return [];
+  }
+};
+
+const saveMemos = (memos) => {
+  fs.writeFileSync(dbPath, JSON.stringify(memos, null, 2));
+};
+
+let memos = loadMemos();
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    saveMemos(memos);
+    return rl.close();
+  }
+  if (text === '목록') {
+    memos.forEach((memo, i) => console.log(`${i + 1}. ${memo}`));
+    return;
+  }
+  if (text !== '') {
+    memos.push(text);
+    saveMemos(memos);
+  }
+});
+EOF
+",
+p010,chmod +w downloads/,
+p011,"find . -name ""*.json"" -o -name "".plan*"" -o -name ""plan.*"" 2>/dev/null | head -20",
+p012,"cat > memo.js << 'EOF'
+#!/usr/bin/env node
+import readline from 'node:readline';
+import fs from 'node:fs';
+
+const dbPath = './memos.json';
+
+const loadMemos = () => {
+  try {
+    return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  } catch {
+    return [];
+  }
+};
+
+const saveMemos = (memos) => {
+  fs.writeFileSync(dbPath, JSON.stringify(memos, null, 2));
+};
+
+let memos = loadMemos();
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    saveMemos(memos);
+    return rl.close();
+  }
+  if (text === '목록') {
+    memos.forEach((memo, i) => console.log(`${i + 1}. ${memo}`));
+    return;
+  }
+  if (text !== '') {
+    memos.push(text);
+    saveMemos(memos);
+  }
+});
+EOF
+",
+p013,"cat > memo.js << 'EOF'
+#!/usr/bin/env node
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dbPath = path.join(process.env.HOME, '.memo.json');
+
+const loadMemos = () => {
+  try {
+    return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  } catch {
+    return [];
+  }
+};
+
+const saveMemos = (memos) => {
+  fs.writeFileSync(dbPath, JSON.stringify(memos, null, 2));
+};
+
+let memos = loadMemos();
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    saveMemos(memos);
+    return rl.close();
+  }
+  if (text === '목록') {
+    memos.forEach((memo, i) => console.log(`${i + 1}. ${memo}`));
+    return;
+  }
+  if (text !== '') {
+    memos.push(text);
+    saveMemos(memos);
+  }
+});
+EOF
+",
+p014,"cat > ""$TMPDIR/organize_files.py"" << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads_by_extension():
+    downloads_path = Path('downloads')
+    
+    if not downloads_path.exists():
+        print(f""오류: {downloads_path} 폴더를 찾을 수 없습니다."")
+        return
+    
+    # 파일들을 확장자별로 분류
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads_path.iterdir():
+        if item.is_file():
+            if item.suffix:
+                extension = item.suffix.lstrip('.')
+            else:
+                extension = '확장자없음'
+            files_by_extension[extension].append(item)
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for extension, files in sorted(files_by_extension.items()):
+        folder_path = downloads_path / extension
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            print(f""✓ {file.name} → {extension}/"")
+    
+    print(f""\n완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+    print(""\n생성된 폴더:"")
+    for extension in sorted(files_by_extension.keys()):
+        count = len(files_by_extension[extension])
+        print(f""  • {extension}/ ({count}개 파일)"")
+
+if __name__ == '__main__':
+    organize_downloads_by_extension()
+EOF
+cat ""$TMPDIR/organize_files.py""
+",
+p015,mkdir -p <RUN_DIR>/blog-app,
+p016,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+downloads_path = Path('<RUN_DIR>/downloads')
+
+files_by_extension = defaultdict(list)
+
+for item in downloads_path.iterdir():
+    if item.is_file():
+        if item.suffix:
+            extension = item.suffix.lstrip('.')
+        else:
+            extension = '확장자없음'
+        files_by_extension[extension].append(item)
+
+for extension, files in sorted(files_by_extension.items()):
+    folder_path = downloads_path / extension
+    folder_path.mkdir(exist_ok=True)
+    
+    for file in files:
+        dest = folder_path / file.name
+        shutil.move(str(file), str(dest))
+        print(f""✓ {file.name} → {extension}/"")
+
+print(f""\n완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+print(""\n생성된 폴더:"")
+for extension in sorted(files_by_extension.keys()):
+    count = len(files_by_extension[extension])
+    print(f""  • {extension}/ ({count}개 파일)"")
+EOF
+",
+p017,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads_by_extension():
+    downloads_path = Path('downloads')
+    
+    # 파일들을 확장자별로 분류
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads_path.iterdir():
+        if item.is_file():
+            if item.suffix:
+                extension = item.suffix.lstrip('.')
+            else:
+                extension = '확장자없음'
+            files_by_extension[extension].append(item)
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for extension, files in sorted(files_by_extension.items()):
+        folder_path = downloads_path / extension
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            print(f""✓ {file.name} → {extension}/"")
+    
+    print(f""\n완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+    print(""\n생성된 폴더:"")
+    for extension in sorted(files_by_extension.keys()):
+        count = len(files_by_extension[extension])
+        print(f""  • {extension}/ ({count}개 파일)"")
+
+organize_downloads_by_extension()
+EOF
+",
+p018,echo $TMPDIR && ls -la $TMPDIR 2>/dev/null | head -20,
+p019,pwd && ls -la downloads/ | head -5,

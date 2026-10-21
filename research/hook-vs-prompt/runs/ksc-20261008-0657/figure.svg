@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="428" height="260" viewBox="0 0 428 260" font-family="sans-serif">
+<rect width="428" height="260" fill="#ffffff"/>
+<line x1="40" x2="416" y1="204" y2="204" stroke="#e0e0e0"/>
+<text x="36" y="207" text-anchor="end" font-size="9">0%</text>
+<line x1="40" x2="416" y1="159" y2="159" stroke="#e0e0e0"/>
+<text x="36" y="162" text-anchor="end" font-size="9">25%</text>
+<line x1="40" x2="416" y1="114" y2="114" stroke="#e0e0e0"/>
+<text x="36" y="117" text-anchor="end" font-size="9">50%</text>
+<line x1="40" x2="416" y1="69" y2="69" stroke="#e0e0e0"/>
+<text x="36" y="72" text-anchor="end" font-size="9">75%</text>
+<line x1="40" x2="416" y1="24" y2="24" stroke="#e0e0e0"/>
+<text x="36" y="27" text-anchor="end" font-size="9">100%</text>
+<rect class="bar" x="58" y="24" width="18" height="180" fill="#ffffff" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="67" x2="67" y1="24.00000000000002" y2="44.43241077131438" stroke="#000" stroke-width="1"/>
+<text x="67" y="21.00000000000002" text-anchor="middle" font-size="7">30/30</text>
+<text x="67" y="215" text-anchor="middle" font-size="9">A</text>
+<rect class="bar" x="80" y="114" width="18" height="90" fill="#bdbdbd" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="89" x2="89" y1="83.67742615296079" y2="144.32257384703922" stroke="#000" stroke-width="1"/>
+<text x="89" y="80.67742615296079" text-anchor="middle" font-size="7">15/30</text>
+<text x="89" y="215" text-anchor="middle" font-size="9">B</text>
+<rect class="bar" x="102" y="204" width="18" height="0" fill="#636363" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="111" x2="111" y1="183.56758922868562" y2="204" stroke="#000" stroke-width="1"/>
+<text x="111" y="180.56758922868562" text-anchor="middle" font-size="7">0/30</text>
+<text x="111" y="215" text-anchor="middle" font-size="9">C</text>
+<rect class="bar" x="124" y="162" width="18" height="42" fill="#252525" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="133" x2="133" y1="130.3290129153801" y2="182.77370133991892" stroke="#000" stroke-width="1"/>
+<text x="133" y="127.3290129153801" text-anchor="middle" font-size="7">7/30</text>
+<text x="133" y="215" text-anchor="middle" font-size="9">C′</text>
+<text x="100" y="230" text-anchor="middle" font-size="10">결정 전 코드 쓰기</text>
+<rect class="bar" x="186" y="120" width="18" height="84" fill="#ffffff" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="195" x2="195" y1="89.05613931577193" y2="149.58169996614043" stroke="#000" stroke-width="1"/>
+<text x="195" y="86.05613931577193" text-anchor="middle" font-size="7">14/30</text>
+<text x="195" y="215" text-anchor="middle" font-size="9">A</text>
+<rect class="bar" x="208" y="156" width="18" height="48" fill="#bdbdbd" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="217" x2="217" y1="123.99366894866003" y2="178.47120602472663" stroke="#000" stroke-width="1"/>
+<text x="217" y="120.99366894866003" text-anchor="middle" font-size="7">8/30</text>
+<text x="217" y="215" text-anchor="middle" font-size="9">B</text>
+<rect class="bar" x="230" y="114" width="18" height="90" fill="#636363" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="239" x2="239" y1="83.67742615296079" y2="144.32257384703922" stroke="#000" stroke-width="1"/>
+<text x="239" y="80.67742615296079" text-anchor="middle" font-size="7">15/30</text>
+<text x="239" y="215" text-anchor="middle" font-size="9">C</text>
+<rect class="bar" x="252" y="96" width="18" height="108" fill="#252525" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="261" x2="261" y1="68.26313061024334" y2="127.82335154401954" stroke="#000" stroke-width="1"/>
+<text x="261" y="65.26313061024334" text-anchor="middle" font-size="7">18/30</text>
+<text x="261" y="215" text-anchor="middle" font-size="9">C′</text>
+<text x="228" y="230" text-anchor="middle" font-size="10">셸 쓰기 시도</text>
+<rect class="bar" x="314" y="192" width="18" height="12" fill="#ffffff" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="323" x2="323" y1="165.61777494728955" y2="200.67413571757135" stroke="#000" stroke-width="1"/>
+<text x="323" y="162.61777494728955" text-anchor="middle" font-size="7">2/30</text>
+<text x="323" y="215" text-anchor="middle" font-size="9">A</text>
+<rect class="bar" x="336" y="204" width="18" height="0" fill="#bdbdbd" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="345" x2="345" y1="183.56758922868562" y2="204" stroke="#000" stroke-width="1"/>
+<text x="345" y="180.56758922868562" text-anchor="middle" font-size="7">0/30</text>
+<text x="345" y="215" text-anchor="middle" font-size="9">B</text>
+<rect class="bar" x="358" y="156" width="18" height="48" fill="#636363" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="367" x2="367" y1="123.99366894866003" y2="178.47120602472663" stroke="#000" stroke-width="1"/>
+<text x="367" y="120.99366894866003" text-anchor="middle" font-size="7">8/30</text>
+<text x="367" y="215" text-anchor="middle" font-size="9">C</text>
+<rect class="bar" x="380" y="186" width="18" height="18" fill="#252525" stroke="#000" stroke-width="0.8"/>
+<line class="ci" x1="389" x2="389" y1="157.88205135746864" y2="197.77202002547983" stroke="#000" stroke-width="1"/>
+<text x="389" y="154.88205135746864" text-anchor="middle" font-size="7">3/30</text>
+<text x="389" y="215" text-anchor="middle" font-size="9">C′</text>
+<text x="356" y="230" text-anchor="middle" font-size="10">진행 없음(P0)</text>
+</svg>

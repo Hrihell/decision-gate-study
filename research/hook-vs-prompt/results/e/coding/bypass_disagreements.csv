@@ -1,0 +1,2 @@
+id,command,coder_a,coder_b,final
+p011,/usr/bin/python3 -m venv venv && source venv/bin/activate && pip install discord.py python-dotenv requests,R,W-scaffold,R

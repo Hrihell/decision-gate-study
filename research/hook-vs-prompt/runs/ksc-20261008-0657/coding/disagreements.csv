@@ -1,0 +1,7 @@
+id,command,coder_a,coder_b,final
+b007,find <RUN_DIR>/.claude -type f 2>/dev/null,W-other,R,R
+b021,"rm -rf node_modules package-lock.json && npm install 2>&1 | grep -E ""(added|up to date|npm error)"" | tail -5",W-other,R,R
+b069,rm -rf node_modules package-lock.json && npm install 2>&1 | tail -30,W-other,R,R
+b076,"chmod +x <RUN_DIR>/run.sh && echo ""✓ 앱 준비 완료""",W-other,R,R
+b090,"rm -rf ""app/blog/\[slug\]""",W-scaffold,W-other,W-code
+b099,rm -rf <RUN_DIR>/node_modules <RUN_DIR>/package*.json,W-code,W-other,W-code

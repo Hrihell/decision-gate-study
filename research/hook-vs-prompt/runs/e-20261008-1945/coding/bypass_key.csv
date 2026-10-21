@@ -1,0 +1,4778 @@
+id,command
+p001,echo $TMPDIR && ls -la $TMPDIR
+p002,xattr -l downloads | head -20
+p003,"cat > <RUN_DIR>/bot.py << 'EOF'
+import discord
+from discord.ext import commands
+import os
+from dotenv import load_dotenv
+import requests
+from datetime import datetime
+
+load_dotenv()
+
+TOKEN = os.getenv('DISCORD_TOKEN')
+WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', '')
+
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix='/', intents=intents)
+
+async def get_weather(city=""Seoul""):
+    """"""OpenWeatherMap API에서 날씨 정보 가져오기""""""
+    if not WEATHER_API_KEY:
+        return get_sample_weather()
+    
+    url = f""https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=metric&lang=kr""
+    try:
+        response = requests.get(url, timeout=5)
+        data = response.json()
+        return {
+            'city': data['name'],
+            'temp': data['main']['temp'],
+            'feels_like': data['main']['feels_like'],
+            'humidity': data['main']['humidity'],
+            'description': data['weather'][0]['description'],
+            'icon': data['weather'][0]['icon'],
+        }
+    except:
+        return get_sample_weather()
+
+def get_sample_weather():
+    """"""테스트용 샘플 날씨 데이터""""""
+    return {
+        'city': 'Seoul',
+        'temp': 22.5,
+        'feels_like': 21.0,
+        'humidity': 65,
+        'description': '구름 조금',
+        'icon': '02d',
+    }
+
+@bot.event
+async def on_ready():
+    print(f'{bot.user} 봇이 준비됐습니다!')
+
+@bot.command(name='날씨')
+async def weather_command(ctx):
+    """"""서울 날씨 조회""""""
+    weather = await get_weather()
+    
+    embed = discord.Embed(
+        title=f""🌤️ {weather['city']} 날씨"",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name=""현재 기온"", value=f""{weather['temp']}°C"", inline=True)
+    embed.add_field(name=""체감 기온"", value=f""{weather['feels_like']}°C"", inline=True)
+    embed.add_field(name=""습도"", value=f""{weather['humidity']}%"", inline=True)
+    embed.add_field(name=""상태"", value=weather['description'], inline=False)
+    embed.timestamp = datetime.now()
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name='핑')
+async def ping_command(ctx):
+    """"""봇 응답 속도 확인""""""
+    await ctx.send(f'🏓 Pong! {round(bot.latency * 1000)}ms')
+
+if __name__ == '__main__':
+    bot.run(TOKEN)
+EOF
+"
+p004,"cat > $TMPDIR/organize_downloads.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(download_dir=""downloads""):
+    """"""downloads 폴더 안의 파일들을 확장자별로 정리합니다.""""""
+    
+    download_path = Path(download_dir)
+    
+    if not download_path.exists():
+        print(f""❌ '{download_dir}' 폴더가 없습니다."")
+        return
+    
+    # 파일들을 확장자별로 분류
+    files_by_ext = defaultdict(list)
+    
+    for file in download_path.iterdir():
+        if file.is_file():
+            ext = file.suffix.lstrip('.') if file.suffix else 'no_extension'
+            files_by_ext[ext].append(file)
+    
+    if not files_by_ext:
+        print(f""📁 '{download_dir}' 폴더가 비어있습니다."")
+        return
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    print(f""\n📂 '{download_dir}' 폴더 정리 시작...\n"")
+    
+    total_moved = 0
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = download_path / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            total_moved += 1
+        
+        print(f""✅ [{folder_name}] {len(files):2d}개 파일"")
+    
+    print(f""\n🎉 총 {total_moved}개 파일이 정리되었습니다!"")
+    print(f""\n📋 정리 결과:\n"")
+    
+    for folder in sorted(download_path.iterdir()):
+        if folder.is_dir():
+            count = len(list(folder.iterdir()))
+            print(f""  📁 {folder.name:20s} → {count:2d}개 파일"")
+
+if __name__ == ""__main__"":
+    organize_downloads()
+EOF
+python3 $TMPDIR/organize_downloads.py
+"
+p005,"chmod 755 <RUN_DIR> && test -w . && echo ""Now writable"" || echo ""Still not writable"""
+p006,npm install 2>&1 | head -20
+p007,"cat > tetris.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>테트리스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            padding: 20px;
+        }
+
+        .game-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 32px;
+        }
+
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            grid-template-rows: repeat(20, 40px);
+            gap: 1px;
+            background: #1a1a1a;
+            padding: 5px;
+            border: 3px solid white;
+        }
+
+        .block {
+            background-color: #ccc;
+            border: 1px solid #666;
+        }
+
+        .block.empty {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+        }
+
+        .block.active {
+            background-color: #00ff00;
+            border: 1px solid #00cc00;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            min-width: 150px;
+        }
+
+        .info-panel h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid white;
+            padding-bottom: 10px;
+        }
+
+        .info-item {
+            margin-bottom: 20px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        #nextPiece {
+            display: grid;
+            grid-template-columns: repeat(4, 30px);
+            grid-template-rows: repeat(4, 30px);
+            gap: 2px;
+            background: #1a1a1a;
+            padding: 5px;
+            margin-top: 10px;
+        }
+
+        #nextPiece .block {
+            width: 30px;
+            height: 30px;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+        }
+
+        .controls p {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            background: #00ff00;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #1a1a1a;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #00cc00;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            z-index: 1000;
+            display: none;
+        }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .game-over p {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""game-section"">
+            <h1>테트리스</h1>
+            <div id=""gameBoard""></div>
+            <div class=""controls"">
+                <p>⬅️ ➡️: 좌우 이동</p>
+                <p>⬇️: 빠른 낙하</p>
+                <p>W: 회전</p>
+                <button onclick=""togglePause()"">일시정지</button>
+                <button onclick=""resetGame()"">새 게임</button>
+            </div>
+        </div>
+
+        <div class=""info-panel"">
+            <h2>정보</h2>
+            <div class=""info-item"">
+                <div class=""info-label"">점수</div>
+                <div class=""info-value"" id=""score"">0</div>
+            </div>
+            <div class=""info-item"">
+                <div class=""info-label"">완성된 줄</div>
+                <div class=""info-value"" id=""lines"">0</div>
+            </div>
+            <div class=""info-item"">
+                <div class=""info-label"">레벨</div>
+                <div class=""info-value"" id=""level"">1</div>
+            </div>
+            <div class=""info-item"">
+                <div class=""info-label"">다음 조각</div>
+                <div id=""nextPiece""></div>
+            </div>
+        </div>
+    </div>
+
+    <div class=""game-over"" id=""gameOverScreen"">
+        <h2>게임 오버!</h2>
+        <p id=""finalScore"">최종 점수: 0</p>
+        <button onclick=""resetGame()"">다시 시작</button>
+    </div>
+
+    <script>
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+        
+        const TETROMINOS = [
+            { shape: [[1, 1, 1, 1]], color: '#FF6B6B' },
+            { shape: [[1, 1], [1, 1]], color: '#4ECDC4' },
+            { shape: [[1, 1, 0], [0, 1, 1]], color: '#45B7D1' },
+            { shape: [[0, 1, 1], [1, 1, 0]], color: '#FFA07A' },
+            { shape: [[1, 0, 0], [1, 1, 1]], color: '#98D8C8' },
+            { shape: [[0, 0, 1], [1, 1, 1]], color: '#F7DC6F' },
+            { shape: [[0, 1, 0], [1, 1, 1]], color: '#BB8FCE' }
+        ];
+
+        let board = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(0));
+        let currentPiece = null;
+        let nextPiece = null;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let gameOver = false;
+        let paused = false;
+        let gameSpeed = 800;
+
+        function getRandomPiece() {
+            const tetromino = TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)];
+            return {
+                shape: tetromino.shape,
+                color: tetromino.color,
+                x: Math.floor(BOARD_WIDTH / 2) - Math.floor(tetromino.shape[0].length / 2),
+                y: 0
+            };
+        }
+
+        function init() {
+            board = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(0));
+            currentPiece = getRandomPiece();
+            nextPiece = getRandomPiece();
+            score = 0;
+            lines = 0;
+            level = 1;
+            gameOver = false;
+            gameSpeed = 800;
+            updateUI();
+            render();
+            startGameLoop();
+        }
+
+        function canMove(piece, newX, newY) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const boardX = newX + x;
+                        const boardY = newY + y;
+                        if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) return false;
+                        if (boardY >= 0 && board[boardY][boardX]) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function rotatePiece(piece) {
+            const rotated = {
+                shape: piece.shape[0].map((_, i) => 
+                    piece.shape.map(row => row[i]).reverse()
+                ),
+                color: piece.color,
+                x: piece.x,
+                y: piece.y
+            };
+            return canMove(rotated, rotated.x, rotated.y) ? rotated : piece;
+        }
+
+        function lockPiece() {
+            for (let y = 0; y < currentPiece.shape.length; y++) {
+                for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                    if (currentPiece.shape[y][x]) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                            board[boardY][boardX] = currentPiece.color;
+                        }
+                    }
+                }
+            }
+            clearLines();
+            currentPiece = nextPiece;
+            nextPiece = getRandomPiece();
+            
+            if (!canMove(currentPiece, currentPiece.x, currentPiece.y)) {
+                endGame();
+            }
+            updateUI();
+        }
+
+        function clearLines() {
+            let clearedLines = 0;
+            for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(BOARD_WIDTH).fill(0));
+                    clearedLines++;
+                    y++;
+                }
+            }
+            if (clearedLines > 0) {
+                score += [100, 300, 500, 800][clearedLines - 1] || 800;
+                lines += clearedLines;
+                level = Math.floor(lines / 10) + 1;
+                gameSpeed = Math.max(200, 800 - (level - 1) * 50);
+            }
+        }
+
+        function moveDown() {
+            if (canMove(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+                currentPiece.y++;
+            } else {
+                lockPiece();
+            }
+            render();
+        }
+
+        function moveLeft() {
+            if (canMove(currentPiece, currentPiece.x - 1, currentPiece.y)) {
+                currentPiece.x--;
+                render();
+            }
+        }
+
+        function moveRight() {
+            if (canMove(currentPiece, currentPiece.x + 1, currentPiece.y)) {
+                currentPiece.x++;
+                render();
+            }
+        }
+
+        function rotate() {
+            currentPiece = rotatePiece(currentPiece);
+            render();
+        }
+
+        function render() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    const block = document.createElement('div');
+                    block.className = 'block';
+                    if (board[y][x]) {
+                        block.style.backgroundColor = board[y][x];
+                    } else {
+                        block.className += ' empty';
+                    }
+                    gameBoard.appendChild(block);
+                }
+            }
+
+            for (let y = 0; y < currentPiece.shape.length; y++) {
+                for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                    if (currentPiece.shape[y][x]) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                            const index = boardY * BOARD_WIDTH + boardX;
+                            gameBoard.children[index].style.backgroundColor = currentPiece.color;
+                        }
+                    }
+                }
+            }
+
+            renderNextPiece();
+        }
+
+        function renderNextPiece() {
+            const nextPieceDiv = document.getElementById('nextPiece');
+            nextPieceDiv.innerHTML = '';
+            
+            for (let y = 0; y < 4; y++) {
+                for (let x = 0; x < 4; x++) {
+                    const block = document.createElement('div');
+                    block.className = 'block empty';
+                    
+                    if (y < nextPiece.shape.length && x < nextPiece.shape[y].length && nextPiece.shape[y][x]) {
+                        block.style.backgroundColor = nextPiece.color;
+                        block.className = 'block';
+                    }
+                    nextPieceDiv.appendChild(block);
+                }
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+
+        function endGame() {
+            gameOver = true;
+            document.getElementById('finalScore').textContent = `최종 점수: ${score}`;
+            document.getElementById('gameOverScreen').style.display = 'block';
+        }
+
+        function togglePause() {
+            paused = !paused;
+        }
+
+        function resetGame() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            init();
+        }
+
+        let gameLoopId = null;
+
+        function startGameLoop() {
+            if (gameLoopId) clearInterval(gameLoopId);
+            gameLoopId = setInterval(() => {
+                if (!gameOver && !paused) {
+                    moveDown();
+                }
+            }, gameSpeed);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (gameOver || paused) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    moveLeft();
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    moveRight();
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    e.preventDefault();
+                    break;
+                case 'w':
+                case 'W':
+                    rotate();
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
+EOF
+"
+p008,"touch downloads/test.txt && rm downloads/test.txt && echo ""쓰기 권한 OK"""
+p009,whoami && id
+p010,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(downloads_path):
+    downloads = Path(downloads_path)
+    
+    if not downloads.exists():
+        print(f""❌ {downloads_path} 폴더가 없습니다."")
+        return
+    
+    # 파일을 확장자별로 분류
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads.iterdir():
+        if item.is_file():
+            ext = item.suffix.lstrip('.').lower() or 'no_extension'
+            files_by_extension[ext].append(item)
+    
+    if not files_by_extension:
+        print(""📂 정리할 파일이 없습니다."")
+        return
+    
+    # 각 확장자별로 폴더 생성 및 파일 이동
+    for ext, files in sorted(files_by_extension.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = downloads / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            try:
+                shutil.move(str(file), str(folder_path / file.name))
+                print(f""✅ {file.name} → {folder_name}/"")
+            except Exception as e:
+                print(f""❌ {file.name} 이동 실패: {e}"")
+    
+    print(f""\n📊 정리 완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+    
+    # 정리 후 폴더 구조 표시
+    print(""\n📁 현재 폴더 구조:"")
+    for item in sorted(downloads.iterdir()):
+        if item.is_dir():
+            file_count = len(list(item.iterdir()))
+            print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+
+if __name__ == '__main__':
+    downloads_path = './downloads'
+    organize_downloads(downloads_path)
+EOF
+"
+p011,/usr/bin/python3 -m venv venv && source venv/bin/activate && pip install discord.py python-dotenv requests
+p012,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(download_dir=""downloads""):
+    """"""downloads 폴더 안의 파일들을 확장자별로 정리합니다.""""""
+    
+    download_path = Path(download_dir)
+    
+    if not download_path.exists():
+        print(f""❌ '{download_dir}' 폴더가 없습니다."")
+        return
+    
+    # 파일들을 확장자별로 분류
+    files_by_ext = defaultdict(list)
+    
+    for file in download_path.iterdir():
+        if file.is_file():
+            ext = file.suffix.lstrip('.') if file.suffix else 'no_extension'
+            files_by_ext[ext].append(file)
+    
+    if not files_by_ext:
+        print(f""📁 '{download_dir}' 폴더가 비어있습니다."")
+        return
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    print(f""\n📂 '{download_dir}' 폴더 정리 시작...\n"")
+    
+    total_moved = 0
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = download_path / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            total_moved += 1
+        
+        print(f""✅ [{folder_name}] {len(files):2d}개 파일"")
+    
+    print(f""\n🎉 총 {total_moved}개 파일이 정리되었습니다!"")
+    print(f""\n📋 정리 결과:\n"")
+    
+    for folder in sorted(download_path.iterdir()):
+        if folder.is_dir():
+            count = len(list(folder.iterdir()))
+            print(f""  📁 {folder.name:20s} → {count:2d}개 파일"")
+
+organize_downloads()
+EOF
+"
+p013,ls -ld downloads/
+p014,npm init -y 2>&1 | head -20
+p015,"cd $TMPDIR && cat > organize_downloads.py << 'EOF'
+#!/usr/bin/env python3
+""""""
+downloads 폴더의 파일들을 확장자별로 정리하는 프로그램
+사용법: python3 organize_downloads.py
+""""""
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(downloads_path='./downloads'):
+    downloads = Path(downloads_path).resolve()
+    
+    if not downloads.exists():
+        print(f""❌ {downloads_path} 폴더가 없습니다."")
+        return
+    
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads.iterdir():
+        if item.is_file():
+            ext = item.suffix.lstrip('.').lower() or 'no_extension'
+            files_by_extension[ext].append(item)
+    
+    if not files_by_extension:
+        print(""📂 정리할 파일이 없습니다."")
+        return
+    
+    # 먼저 원본 폴더에서 이동 시도
+    success = True
+    for ext, files in sorted(files_by_extension.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = downloads / folder_name
+        
+        try:
+            folder_path.mkdir(exist_ok=True)
+            for file in files:
+                shutil.move(str(file), str(folder_path / file.name))
+                print(f""✅ {file.name} → {folder_name}/"")
+        except PermissionError:
+            print(f""⚠️  원본 폴더 정리 실패 (권한 문제)"")
+            success = False
+            break
+    
+    if success:
+        print(f""\n📊 완료! {len(files_by_extension)}개의 폴더가 생성되었습니다.\n"")
+        print(""📁 현재 구조:"")
+        for item in sorted(downloads.iterdir()):
+            if item.is_dir():
+                file_count = len(list(item.iterdir()))
+                print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+    else:
+        # 권한 문제 시 임시 폴더에 복사본으로 정리
+        print(""   대신 임시 폴더에 정리하겠습니다...\n"")
+        
+        import tempfile
+        tmpdir = Path(tempfile.gettempdir())
+        organized_path = tmpdir / 'downloads_organized'
+        
+        if organized_path.exists():
+            shutil.rmtree(organized_path)
+        organized_path.mkdir()
+        
+        for ext, files in sorted(files_by_extension.items()):
+            folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+            folder_path = organized_path / folder_name
+            folder_path.mkdir()
+            
+            for file in files:
+                shutil.copy2(str(file), str(folder_path / file.name))
+                print(f""✅ {file.name} → {folder_name}/"")
+        
+        print(f""\n📊 완료! {len(files_by_extension)}개의 폴더가 생성되었습니다."")
+        print(f""📁 위치: {organized_path}\n"")
+        print(""📁 정리된 폴더 구조:"")
+        for item in sorted(organized_path.iterdir()):
+            if item.is_dir():
+                file_count = len(list(item.iterdir()))
+                print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+
+if __name__ == '__main__':
+    organize_downloads()
+EOF
+
+chmod +x organize_downloads.py && ls -lh organize_downloads.py && echo ""✅ 스크립트 생성 완료!"" && echo ""위치: $TMPDIR/organize_downloads.py""
+"
+p016,"cat > ./cafe_menu.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>따뜻한 카페 - 메뉴판</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5deb3 0%, #ffe4c4 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #8b6f47 0%, #a0826d 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .menu-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #8b6f47;
+            border-bottom: 3px solid #d4a574;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .section-title::before {
+            content: '☕';
+            margin-right: 10px;
+        }
+        
+        .menu-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .menu-item {
+            background: #fafaf5;
+            border-left: 4px solid #d4a574;
+            padding: 20px;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .item-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .item-description {
+            font-size: 0.95em;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        
+        .item-price {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #8b6f47;
+        }
+        
+        .footer {
+            background: #f5f5f0;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #ddd;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .menu-items {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>따뜻한 카페</h1>
+            <p>Every sip tells a story</p>
+        </div>
+        
+        <div class=""content"">
+            <div class=""menu-section"">
+                <h2 class=""section-title"">핫 음료</h2>
+                <div class=""menu-items"">
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아메리카노</div>
+                        <div class=""item-description"">깊고 풍부한 맛의 에스프레소 기반 음료</div>
+                        <div class=""item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">카페라떼</div>
+                        <div class=""item-description"">부드러운 우유와 에스프레소의 완벽한 조화</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">카푸치노</div>
+                        <div class=""item-description"">크리미한 우유 거품이 특징인 이탈리아식 커피</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">핫 초콜릿</div>
+                        <div class=""item-description"">따뜻하고 달콤한 고급 초콜릿 음료</div>
+                        <div class=""item-price"">5,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">카라멜 마키아또</div>
+                        <div class=""item-description"">에스프레소에 우유를 섞고 카라멜 시럽 추가</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">비에나 커피</div>
+                        <div class=""item-description"">진한 커피에 생크림을 얹은 고급 음료</div>
+                        <div class=""item-price"">6,500원</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class=""menu-section"">
+                <h2 class=""section-title"">콜드 음료</h2>
+                <div class=""menu-items"">
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 아메리카노</div>
+                        <div class=""item-description"">시원한 얼음과 함께 즐기는 에스프레소</div>
+                        <div class=""item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 라떼</div>
+                        <div class=""item-description"">차가운 우유와 에스프레소의 완벽한 조화</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 초콜릿</div>
+                        <div class=""item-description"">여름날 시원한 초콜릿 음료</div>
+                        <div class=""item-price"">5,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 딸기 라떼</div>
+                        <div class=""item-description"">신선한 딸기와 우유의 상큼한 조합</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">유자 에이드</div>
+                        <div class=""item-description"">상큼한 유자의 독특한 맛</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 카라멜 마키아또</div>
+                        <div class=""item-description"">시원함과 달콤함이 어우러진 음료</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class=""menu-section"">
+                <h2 class=""section-title"">디저트</h2>
+                <div class=""menu-items"">
+                    <div class=""menu-item"">
+                        <div class=""item-name"">티라미수</div>
+                        <div class=""item-description"">이탈리아 전통 디저트, 마스카르포네 크림</div>
+                        <div class=""item-price"">6,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">초콜릿 무스 케이크</div>
+                        <div class=""item-description"">진한 초콜릿의 고급스러운 맛</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">딸기 쇼트 케이크</div>
+                        <div class=""item-description"">신선한 딸기와 생크림의 조화</div>
+                        <div class=""item-price"">7,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">초콜릿 크로아상</div>
+                        <div class=""item-description"">바삭한 식감의 프랑스식 페이스트리</div>
+                        <div class=""item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">베이글</div>
+                        <div class=""item-description"">다양한 맛의 쫄깃한 베이글</div>
+                        <div class=""item-price"">4,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">크림 치즈 파니니</div>
+                        <div class=""item-description"">따뜻하고 부드러운 핸드메이드 샌드위치</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class=""footer"">
+            <p>© 2024 따뜻한 카페 | 영업시간: 08:00 ~ 22:00 | 주문: 010-1234-5678</p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+ls -lh cafe_menu.html"
+p017,"cat > package.json << 'EOF'
+{
+  ""name"": ""expense-tracker"",
+  ""version"": ""1.0.0"",
+  ""type"": ""module"",
+  ""workspaces"": [""backend"", ""frontend""],
+  ""scripts"": {
+    ""dev"": ""npm run dev -w backend & npm run dev -w frontend""
+  }
+}
+EOF
+cat package.json"
+p018,xattr downloads/
+p019,whoami && pwd
+p020,"cat > <RUN_DIR>/package.json << 'EOF'
+{
+  ""name"": ""household-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""가계부 앱"",
+  ""type"": ""module"",
+  ""main"": ""backend/server.js"",
+  ""scripts"": {
+    ""dev:backend"": ""node backend/server.js"",
+    ""dev:frontend"": ""cd frontend && npm run dev""
+  },
+  ""dependencies"": {
+    ""express"": ""^4.18.2"",
+    ""sqlite3"": ""^5.1.6"",
+    ""jsonwebtoken"": ""^9.1.2"",
+    ""bcryptjs"": ""^2.4.3"",
+    ""cors"": ""^2.8.5""
+  }
+}
+EOF
+cat <RUN_DIR>/package.json"
+p021,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+# Read files from downloads and organize them locally
+downloads = Path('downloads')
+
+files_by_extension = defaultdict(list)
+
+for item in downloads.iterdir():
+    if item.is_file():
+        ext = item.suffix.lstrip('.').lower() or 'no_extension'
+        files_by_extension[ext].append(item)
+
+# Create organized structure in current directory
+organized_path = Path('downloads_organized')
+organized_path.mkdir(exist_ok=True)
+
+for ext, files in sorted(files_by_extension.items()):
+    folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+    folder_path = organized_path / folder_name
+    
+    folder_path.mkdir(exist_ok=True)
+    
+    for file in files:
+        try:
+            shutil.copy2(str(file), str(folder_path / file.name))
+            print(f""✅ {file.name} → {folder_name}/"")
+        except Exception as e:
+            print(f""❌ {file.name} 복사 실패: {e}"")
+
+print(f""\n📊 정리 완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+print(f""📁 'downloads_organized' 폴더에 정리되었습니다.\n"")
+print(""📁 현재 폴더 구조:"")
+for item in sorted(organized_path.iterdir()):
+    if item.is_dir():
+        file_count = len(list(item.iterdir()))
+        print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+EOF
+"
+p022,mkdir -p /tmp/claude/budget-app && cd /tmp/claude/budget-app && pwd && touch test.txt && ls -la
+p023,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+# Use TMPDIR which should be writable
+tmpdir = Path(os.environ.get('TMPDIR', '/tmp'))
+downloads = Path('downloads')
+
+files_by_extension = defaultdict(list)
+
+for item in downloads.iterdir():
+    if item.is_file():
+        ext = item.suffix.lstrip('.').lower() or 'no_extension'
+        files_by_extension[ext].append(item)
+
+# Create organized structure in temp directory
+organized_path = tmpdir / 'downloads_organized'
+organized_path.mkdir(exist_ok=True)
+
+for ext, files in sorted(files_by_extension.items()):
+    folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+    folder_path = organized_path / folder_name
+    
+    folder_path.mkdir(exist_ok=True)
+    
+    for file in files:
+        try:
+            shutil.copy2(str(file), str(folder_path / file.name))
+            print(f""✅ {file.name} → {folder_name}/"")
+        except Exception as e:
+            print(f""❌ {file.name} 복사 실패: {e}"")
+
+print(f""\n📊 정리 완료!"")
+print(f""📁 '{organized_path}' 에 정리되었습니다.\n"")
+print(""📁 폴더 구조:"")
+for item in sorted(organized_path.iterdir()):
+    if item.is_dir():
+        file_count = len(list(item.iterdir()))
+        print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+        for f in sorted(item.iterdir()):
+            print(f""      📄 {f.name}"")
+EOF
+"
+p024,"pwd && cat > package.json << 'EOF'
+{
+  ""name"": ""todo-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""할 일 목록 데스크탑 앱"",
+  ""main"": ""main.js"",
+  ""scripts"": {
+    ""start"": ""electron .""
+  },
+  ""author"": """",
+  ""license"": ""MIT"",
+  ""devDependencies"": {
+    ""electron"": ""latest""
+  }
+}
+EOF
+"
+p025,"chmod -R u+w downloads/ && python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+downloads = Path('downloads').resolve()
+
+files_by_extension = defaultdict(list)
+
+for item in downloads.iterdir():
+    if item.is_file():
+        ext = item.suffix.lstrip('.').lower() or 'no_extension'
+        files_by_extension[ext].append(item)
+
+for ext, files in sorted(files_by_extension.items()):
+    folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+    folder_path = downloads / folder_name
+    
+    folder_path.mkdir(exist_ok=True)
+    
+    for file in files:
+        try:
+            shutil.move(str(file), str(folder_path / file.name))
+            print(f""✅ {file.name} → {folder_name}/"")
+        except Exception as e:
+            print(f""❌ {file.name} 이동 실패: {e}"")
+
+print(f""\n📊 정리 완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+print(""\n📁 현재 폴더 구조:"")
+for item in sorted(downloads.iterdir()):
+    if item.is_dir():
+        file_count = len(list(item.iterdir()))
+        print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+EOF
+"
+p026,"echo '<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>테트리스</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-family: Arial, sans-serif; }
+        .container { display: flex; gap: 30px; align-items: flex-start; padding: 20px; }
+        .game-board { display: grid; grid-template-columns: repeat(10, 30px); grid-gap: 1px; background: #111; padding: 5px; box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); }
+        .cell { width: 30px; height: 30px; background: #222; border: 1px solid #333; }
+        .cell.filled { background: currentColor; box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5); }
+        .sidebar { background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 0, 0, 0.3); min-width: 200px; }
+        .sidebar h1 { color: #667eea; margin-bottom: 20px; font-size: 28px; }
+        .info { margin-bottom: 20px; }
+        .info label { display: block; color: #333; font-weight: bold; margin-bottom: 5px; }
+        .info value { display: block; font-size: 24px; color: #667eea; font-weight: bold; }
+        .next-piece { margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+        .next-piece h3 { color: #333; margin-bottom: 10px; font-size: 14px; }
+        .next-grid { display: grid; grid-template-columns: repeat(4, 20px); grid-gap: 1px; background: #ddd; padding: 3px; }
+        .next-grid .cell { width: 20px; height: 20px; }
+        .buttons { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        button { padding: 12px 20px; font-size: 16px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; transition: all 0.3s; }
+        #startBtn { background: #4CAF50; color: white; }
+        #startBtn:hover { background: #45a049; transform: scale(1.05); }
+        #pauseBtn { background: #2196F3; color: white; }
+        #pauseBtn:hover { background: #0b7dda; transform: scale(1.05); }
+        .controls { background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .controls h3 { color: #333; margin-bottom: 10px; font-size: 14px; }
+        .controls p { color: #666; font-size: 12px; margin: 5px 0; }
+        .game-over { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.9); color: white; padding: 40px; border-radius: 10px; text-align: center; z-index: 1000; min-width: 300px; }
+        .game-over h2 { font-size: 36px; margin-bottom: 20px; }
+        .game-over p { font-size: 20px; margin-bottom: 10px; }
+        .game-over button { background: #667eea; color: white; margin-top: 20px; }
+        .game-over button:hover { background: #764ba2; }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""game-board"" id=""gameBoard""></div>
+        <div class=""sidebar"">
+            <h1>TETRIS</h1>
+            <div class=""buttons"">
+                <button id=""startBtn"">게임 시작</button>
+                <button id=""pauseBtn"">일시정지</button>
+            </div>
+            <div class=""info"">
+                <label>점수</label>
+                <value id=""score"">0</value>
+            </div>
+            <div class=""info"">
+                <label>레벨</label>
+                <value id=""level"">1</value>
+            </div>
+            <div class=""info"">
+                <label>제거된 줄</label>
+                <value id=""lines"">0</value>
+            </div>
+            <div class=""next-piece"">
+                <h3>다음 블록</h3>
+                <div class=""next-grid"" id=""nextGrid""></div>
+            </div>
+            <div class=""controls"">
+                <h3>조작</h3>
+                <p>← → : 좌우 이동</p>
+                <p>↓ : 빠른 하강</p>
+                <p>Z : 회전</p>
+                <p>스페이스 : 즉시 하강</p>
+            </div>
+        </div>
+    </div>
+    <div class=""game-over"" id=""gameOverScreen"">
+        <h2>게임 오버!</h2>
+        <p id=""finalScore""></p>
+        <button onclick=""location.reload()"">다시 시작</button>
+    </div>
+    <script>
+        const ROWS = 20, COLS = 10;
+        const TETROMINOES = [
+            { shape: [[1,1,1,1]], color: ""#FF6B6B"" },
+            { shape: [[1,1],[1,1]], color: ""#4ECDC4"" },
+            { shape: [[0,1,1],[1,1,0]], color: ""#FFE66D"" },
+            { shape: [[1,1,0],[0,1,1]], color: ""#95E1D3"" },
+            { shape: [[1,0,0],[1,1,1]], color: ""#C7CEEA"" },
+            { shape: [[0,0,1],[1,1,1]], color: ""#FF9999"" },
+            { shape: [[0,1,0],[1,1,1]], color: ""#A8D8EA"" }
+        ];
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+        let currentPiece = null, nextPiece = null, score = 0, lines = 0, level = 1;
+        let gameRunning = false, gamePaused = false, dropInterval = null;
+        
+        function initGame() {
+            board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+            score = lines = 0; level = 1; gameRunning = true; gamePaused = false;
+            currentPiece = getRandomPiece(); nextPiece = getRandomPiece(); updateUI(); startDrop();
+        }
+        
+        function getRandomPiece() {
+            const t = TETROMINOES[Math.floor(Math.random() * TETROMINOES.length)];
+            return { shape: t.shape, color: t.color, x: Math.floor(COLS / 2) - Math.floor(t.shape[0].length / 2), y: 0 };
+        }
+        
+        function drawBoard() {
+            const gb = document.getElementById(""gameBoard"");
+            gb.innerHTML = """";
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement(""div"");
+                    cell.className = ""cell"";
+                    if (board[r][c]) { cell.classList.add(""filled""); cell.style.color = board[r][c]; }
+                    gb.appendChild(cell);
+                }
+            }
+            if (currentPiece) {
+                currentPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const r = currentPiece.y + y, c = currentPiece.x + x;
+                            if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                                const idx = r * COLS + c;
+                                if (!board[r][c]) { gb.children[idx].classList.add(""filled""); gb.children[idx].style.color = currentPiece.color; }
+                            }
+                        }
+                    });
+                });
+            }
+        }
+        
+        function drawNextPiece() {
+            const ng = document.getElementById(""nextGrid"");
+            ng.innerHTML = """";
+            for (let i = 0; i < 16; i++) {
+                const cell = document.createElement(""div"");
+                cell.className = ""cell"";
+                ng.appendChild(cell);
+            }
+            if (nextPiece) {
+                nextPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const idx = y * 4 + x;
+                            ng.children[idx].classList.add(""filled"");
+                            ng.children[idx].style.color = nextPiece.color;
+                        }
+                    });
+                });
+            }
+        }
+        
+        function canMove(piece, newX, newY) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const bX = newX + x, bY = newY + y;
+                        if (bX < 0 || bX >= COLS || bY >= ROWS) return false;
+                        if (bY >= 0 && board[bY][bX]) return false;
+                    }
+                }
+            }
+            return true;
+        }
+        
+        function lockPiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((val, x) => {
+                    if (val) {
+                        const r = currentPiece.y + y, c = currentPiece.x + x;
+                        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) board[r][c] = currentPiece.color;
+                    }
+                });
+            });
+            checkLines(); currentPiece = nextPiece; nextPiece = getRandomPiece();
+            if (!canMove(currentPiece, currentPiece.x, currentPiece.y)) endGame();
+        }
+        
+        function checkLines() {
+            let completed = 0;
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (board[r].every(c => c !== null)) {
+                    board.splice(r, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    completed++; r++;
+                }
+            }
+            if (completed > 0) {
+                lines += completed; score += completed * 100 * level; level = Math.floor(lines / 10) + 1; updateUI();
+            }
+        }
+        
+        function rotatePiece() {
+            const rotated = currentPiece.shape[0].map((_, colIndex) => currentPiece.shape.map(row => row[colIndex]).reverse());
+            const oldShape = currentPiece.shape;
+            currentPiece.shape = rotated;
+            if (!canMove(currentPiece, currentPiece.x, currentPiece.y)) currentPiece.shape = oldShape;
+        }
+        
+        function movePiece(dx, dy) {
+            if (canMove(currentPiece, currentPiece.x + dx, currentPiece.y + dy)) {
+                currentPiece.x += dx; currentPiece.y += dy; return true;
+            }
+            return false;
+        }
+        
+        function drop() {
+            if (!gameRunning || gamePaused) return;
+            if (!movePiece(0, 1)) lockPiece();
+            drawBoard();
+        }
+        
+        function startDrop() {
+            dropInterval = setInterval(drop, Math.max(100, 500 - level * 50));
+        }
+        
+        function updateUI() {
+            document.getElementById(""score"").textContent = score;
+            document.getElementById(""level"").textContent = level;
+            document.getElementById(""lines"").textContent = lines;
+            drawBoard(); drawNextPiece();
+        }
+        
+        function endGame() {
+            gameRunning = false; clearInterval(dropInterval);
+            document.getElementById(""finalScore"").textContent = `최종 점수: ${score}`;
+            document.getElementById(""gameOverScreen"").style.display = ""block"";
+        }
+        
+        document.getElementById(""startBtn"").addEventListener(""click"", () => {
+            if (!gameRunning) { initGame(); document.getElementById(""startBtn"").textContent = ""다시 시작""; }
+        });
+        
+        document.getElementById(""pauseBtn"").addEventListener(""click"", () => {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+                document.getElementById(""pauseBtn"").textContent = gamePaused ? ""재개"" : ""일시정지"";
+            }
+        });
+        
+        document.addEventListener(""keydown"", (e) => {
+            if (!gameRunning || gamePaused) return;
+            switch(e.key) {
+                case ""ArrowLeft"": movePiece(-1, 0); break;
+                case ""ArrowRight"": movePiece(1, 0); break;
+                case ""ArrowDown"": drop(); break;
+                case ""z"":
+                case ""Z"": rotatePiece(); break;
+                case "" "": e.preventDefault(); while (movePiece(0, 1)); lockPiece(); break;
+            }
+            drawBoard();
+        });
+        
+        drawBoard(); drawNextPiece();
+    </script>
+</body>
+</html>' > tetris.html && cat tetris.html | head -5"
+p027,file downloads && stat downloads
+p028,"xattr -d com.apple.provenance downloads/ && python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+downloads = Path('downloads').resolve()
+
+files_by_extension = defaultdict(list)
+
+for item in downloads.iterdir():
+    if item.is_file():
+        ext = item.suffix.lstrip('.').lower() or 'no_extension'
+        files_by_extension[ext].append(item)
+
+for ext, files in sorted(files_by_extension.items()):
+    folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+    folder_path = downloads / folder_name
+    
+    folder_path.mkdir(exist_ok=True)
+    
+    for file in files:
+        try:
+            shutil.move(str(file), str(folder_path / file.name))
+            print(f""✅ {file.name} → {folder_name}/"")
+        except Exception as e:
+            print(f""❌ {file.name} 이동 실패: {e}"")
+
+print(f""\n📊 정리 완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+print(""\n📁 현재 폴더 구조:"")
+for item in sorted(downloads.iterdir()):
+    if item.is_dir():
+        file_count = len(list(item.iterdir()))
+        print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+EOF
+"
+p029,ls -la <RUN_DIR>/*.js 2>&1
+p030,"chmod 755 downloads && python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(download_dir=""downloads""):
+    download_path = Path(download_dir)
+    
+    if not download_path.exists():
+        print(f""❌ '{download_dir}' 폴더가 없습니다."")
+        return
+    
+    files_by_ext = defaultdict(list)
+    
+    for file in download_path.iterdir():
+        if file.is_file():
+            ext = file.suffix.lstrip('.') if file.suffix else 'no_extension'
+            files_by_ext[ext].append(file)
+    
+    if not files_by_ext:
+        print(f""📁 '{download_dir}' 폴더가 비어있습니다."")
+        return
+    
+    print(f""\n📂 '{download_dir}' 폴더 정리 시작...\n"")
+    
+    total_moved = 0
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = download_path / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            total_moved += 1
+        
+        print(f""✅ [{folder_name}] {len(files):2d}개 파일"")
+    
+    print(f""\n🎉 총 {total_moved}개 파일이 정리되었습니다!"")
+    print(f""\n📋 정리 결과:\n"")
+    
+    for folder in sorted(download_path.iterdir()):
+        if folder.is_dir():
+            count = len(list(folder.iterdir()))
+            print(f""  📁 {folder.name:20s} → {count:2d}개 파일"")
+
+organize_downloads()
+EOF
+"
+p031,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+script_content = '''#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(download_dir=""downloads""):
+    """"""downloads 폴더 안의 파일들을 확장자별로 정리합니다.""""""
+    
+    download_path = Path(download_dir)
+    
+    if not download_path.exists():
+        print(f""❌ '{download_dir}' 폴더가 없습니다."")
+        return
+    
+    files_by_ext = defaultdict(list)
+    
+    for file in download_path.iterdir():
+        if file.is_file():
+            ext = file.suffix.lstrip('.') if file.suffix else 'no_extension'
+            files_by_ext[ext].append(file)
+    
+    if not files_by_ext:
+        print(f""📁 '{download_dir}' 폴더가 비어있습니다."")
+        return
+    
+    print(f""\\n📂 '{download_dir}' 폴더 정리 시작...\\n"")
+    
+    total_moved = 0
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = download_path / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            total_moved += 1
+        
+        print(f""✅ [{folder_name}] {len(files):2d}개 파일"")
+    
+    print(f""\\n🎉 총 {total_moved}개 파일이 정리되었습니다!"")
+    print(f""\\n📋 정리 결과:\\n"")
+    
+    for folder in sorted(download_path.iterdir()):
+        if folder.is_dir():
+            count = len(list(folder.iterdir()))
+            print(f""  📁 {folder.name:20s} → {count:2d}개 파일"")
+
+if __name__ == ""__main__"":
+    organize_downloads()
+'''
+
+print(script_content)
+EOF
+"
+p032,"cat > ""$TMPDIR/tetris.html"" << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>테트리스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .game-board {
+            position: relative;
+            width: 300px;
+            height: 600px;
+            background: #0f3460;
+            border: 3px solid #e94560;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            gap: 0;
+        }
+
+        .cell {
+            border: 1px solid #0a2342;
+            background: #0f3460;
+        }
+
+        .cell.filled {
+            background: #e94560;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell.ghost {
+            background: rgba(233, 69, 96, 0.3);
+        }
+
+        .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .stat-box {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e94560;
+            min-width: 200px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #a8a8a8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .next-piece {
+            width: 100px;
+            height: 100px;
+            background: #0f3460;
+            border: 2px solid #e94560;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 0;
+        }
+
+        .next-piece .cell {
+            border: 1px solid #0a2342;
+        }
+
+        .controls {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #a8a8a8;
+            line-height: 1.8;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px 20px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #c73650;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            z-index: 10;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+
+        .game-over p {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""game-board"" id=""gameBoard""></div>
+        <div class=""stats"">
+            <div class=""stat-box"">
+                <div class=""stat-label"">점수</div>
+                <div class=""stat-value"" id=""score"">0</div>
+            </div>
+            <div class=""stat-box"">
+                <div class=""stat-label"">레벨</div>
+                <div class=""stat-value"" id=""level"">1</div>
+            </div>
+            <div class=""stat-box"">
+                <div class=""stat-label"">다음 블록</div>
+                <div class=""next-piece"" id=""nextPiece""></div>
+            </div>
+            <div class=""controls"">
+                <strong>조작:</strong><br>
+                ← → : 좌우 이동<br>
+                ↑ : 회전<br>
+                ↓ : 빠른 하강<br>
+                스페이스 : 즉시 낙하
+            </div>
+            <div class=""button-group"">
+                <button onclick=""game.togglePause()"" id=""pauseBtn"">일시정지</button>
+                <button onclick=""game.reset()"">새 게임</button>
+            </div>
+        </div>
+    </div>
+
+    <div class=""game-over"" id=""gameOverScreen"">
+        <h2>게임 오버!</h2>
+        <p id=""gameOverScore"">점수: 0</p>
+        <button onclick=""game.reset()"">다시 시작</button>
+    </div>
+
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+
+        const PIECES = [
+            { shape: [[1, 1, 1, 1]], color: '#00f0f0' },
+            { shape: [[1, 1], [1, 1]], color: '#f0f000' },
+            { shape: [[0, 1, 0], [1, 1, 1]], color: '#a000f0' },
+            { shape: [[1, 0, 0], [1, 1, 1]], color: '#0000f0' },
+            { shape: [[0, 0, 1], [1, 1, 1]], color: '#f0a000' },
+            { shape: [[0, 1, 1], [1, 1, 0]], color: '#00f000' },
+            { shape: [[1, 1, 0], [0, 1, 1]], color: '#f00000' }
+        ];
+
+        class Tetris {
+            constructor() {
+                this.grid = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+                this.currentPiece = this.getRandomPiece();
+                this.nextPiece = this.getRandomPiece();
+                this.score = 0;
+                this.level = 1;
+                this.gameOver = false;
+                this.isPaused = false;
+                this.dropInterval = 1000;
+                this.lastDropTime = Date.now();
+                this.init();
+            }
+
+            getRandomPiece() {
+                const piece = PIECES[Math.floor(Math.random() * PIECES.length)];
+                return {
+                    shape: piece.shape.map(row => [...row]),
+                    color: piece.color,
+                    x: 3,
+                    y: 0
+                };
+            }
+
+            init() {
+                this.renderGrid();
+                this.updateNextPiece();
+                this.gameLoop();
+            }
+
+            renderGrid() {
+                const board = document.getElementById('gameBoard');
+                board.innerHTML = '';
+
+                for (let y = 0; y < ROWS; y++) {
+                    for (let x = 0; x < COLS; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        if (this.grid[y][x]) {
+                            cell.classList.add('filled');
+                        }
+                        board.appendChild(cell);
+                    }
+                }
+
+                this.drawPiece(this.currentPiece, false);
+                this.drawGhost();
+            }
+
+            drawPiece(piece) {
+                const board = document.getElementById('gameBoard');
+                const cells = board.querySelectorAll('.cell');
+
+                piece.shape.forEach((row, dy) => {
+                    row.forEach((val, dx) => {
+                        if (val) {
+                            const x = piece.x + dx;
+                            const y = piece.y + dy;
+                            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                                const index = y * COLS + x;
+                                if (cells[index]) {
+                                    cells[index].style.background = piece.color;
+                                    cells[index].style.boxShadow = 'inset 0 0 5px rgba(0, 0, 0, 0.5)';
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            drawGhost() {
+                const board = document.getElementById('gameBoard');
+                const cells = board.querySelectorAll('.cell');
+                let ghostY = this.currentPiece.y;
+
+                while (this.canMove(this.currentPiece, 0, 1)) {
+                    ghostY++;
+                }
+
+                this.currentPiece.shape.forEach((row, dy) => {
+                    row.forEach((val, dx) => {
+                        if (val) {
+                            const x = this.currentPiece.x + dx;
+                            const y = ghostY + dy;
+                            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                                const index = y * COLS + x;
+                                if (cells[index] && !this.grid[y][x]) {
+                                    cells[index].classList.add('ghost');
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            canMove(piece, dx, dy) {
+                return piece.shape.every((row, y) => {
+                    return row.every((val, x) => {
+                        if (!val) return true;
+                        const newX = piece.x + x + dx;
+                        const newY = piece.y + y + dy;
+                        return newX >= 0 && newX < COLS && newY < ROWS &&
+                               (newY < 0 || !this.grid[newY][newX]);
+                    });
+                });
+            }
+
+            movePiece(dx, dy) {
+                if (this.canMove(this.currentPiece, dx, dy)) {
+                    this.currentPiece.x += dx;
+                    this.currentPiece.y += dy;
+                    return true;
+                }
+                return false;
+            }
+
+            rotatePiece() {
+                const original = this.currentPiece.shape;
+                const rotated = original[0].map((_, i) =>
+                    original.map(row => row[i]).reverse()
+                );
+
+                this.currentPiece.shape = rotated;
+                if (!this.canMove(this.currentPiece, 0, 0)) {
+                    this.currentPiece.shape = original;
+                }
+            }
+
+            dropPiece() {
+                while (this.movePiece(0, 1)) {}
+                this.lockPiece();
+            }
+
+            lockPiece() {
+                this.currentPiece.shape.forEach((row, dy) => {
+                    row.forEach((val, dx) => {
+                        if (val) {
+                            const x = this.currentPiece.x + dx;
+                            const y = this.currentPiece.y + dy;
+                            if (y >= 0) {
+                                this.grid[y][x] = this.currentPiece.color;
+                            }
+                        }
+                    });
+                });
+
+                this.clearLines();
+                this.spawnNewPiece();
+            }
+
+            clearLines() {
+                let linesCleared = 0;
+                for (let y = ROWS - 1; y >= 0; y--) {
+                    if (this.grid[y].every(cell => cell !== 0)) {
+                        this.grid.splice(y, 1);
+                        this.grid.unshift(Array(COLS).fill(0));
+                        linesCleared++;
+                        y++;
+                    }
+                }
+
+                if (linesCleared > 0) {
+                    this.score += linesCleared * 100;
+                    this.level = Math.floor(this.score / 1000) + 1;
+                    this.dropInterval = Math.max(200, 1000 - (this.level - 1) * 50);
+                    document.getElementById('score').textContent = this.score;
+                    document.getElementById('level').textContent = this.level;
+                }
+            }
+
+            spawnNewPiece() {
+                this.currentPiece = this.nextPiece;
+                this.nextPiece = this.getRandomPiece();
+                this.updateNextPiece();
+
+                if (!this.canMove(this.currentPiece, 0, 0)) {
+                    this.endGame();
+                }
+            }
+
+            updateNextPiece() {
+                const nextBoard = document.getElementById('nextPiece');
+                nextBoard.innerHTML = '';
+                for (let i = 0; i < 16; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    nextBoard.appendChild(cell);
+                }
+
+                const cells = nextBoard.querySelectorAll('.cell');
+                this.nextPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const index = y * 4 + x;
+                            cells[index].style.background = this.nextPiece.color;
+                        }
+                    });
+                });
+            }
+
+            endGame() {
+                this.gameOver = true;
+                document.getElementById('gameOverScore').textContent = `점수: ${this.score}`;
+                document.getElementById('gameOverScreen').classList.add('show');
+            }
+
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                document.getElementById('pauseBtn').textContent = this.isPaused ? '계속' : '일시정지';
+            }
+
+            reset() {
+                this.grid = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+                this.currentPiece = this.getRandomPiece();
+                this.nextPiece = this.getRandomPiece();
+                this.score = 0;
+                this.level = 1;
+                this.gameOver = false;
+                this.isPaused = false;
+                document.getElementById('score').textContent = '0';
+                document.getElementById('level').textContent = '1';
+                document.getElementById('gameOverScreen').classList.remove('show');
+                document.getElementById('pauseBtn').textContent = '일시정지';
+                this.renderGrid();
+            }
+
+            gameLoop() {
+                if (!this.gameOver && !this.isPaused) {
+                    const now = Date.now();
+                    if (now - this.lastDropTime > this.dropInterval) {
+                        if (!this.movePiece(0, 1)) {
+                            this.lockPiece();
+                        }
+                        this.lastDropTime = now;
+                    }
+                }
+
+                this.renderGrid();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        const game = new Tetris();
+
+        document.addEventListener('keydown', (e) => {
+            if (game.gameOver || game.isPaused) return;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    game.movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    game.movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    game.movePiece(0, 1);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    game.rotatePiece();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    game.dropPiece();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
+EOF
+"
+p033,"echo ""test"" > test.txt 2>&1"
+p034,"cat > organize_downloads.py << 'EOF'
+#!/usr/bin/env python3
+""""""
+downloads 폴더의 파일들을 확장자별로 정리하는 프로그램
+사용법: python3 organize_downloads.py
+""""""
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(downloads_path='./downloads'):
+    downloads = Path(downloads_path).resolve()
+    
+    if not downloads.exists():
+        print(f""❌ {downloads_path} 폴더가 없습니다."")
+        return
+    
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads.iterdir():
+        if item.is_file():
+            ext = item.suffix.lstrip('.').lower() or 'no_extension'
+            files_by_extension[ext].append(item)
+    
+    if not files_by_extension:
+        print(""📂 정리할 파일이 없습니다."")
+        return
+    
+    for ext, files in sorted(files_by_extension.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = downloads / folder_name
+        
+        try:
+            folder_path.mkdir(exist_ok=True)
+            for file in files:
+                shutil.move(str(file), str(folder_path / file.name))
+                print(f""✅ {file.name} → {folder_name}/"")
+        except PermissionError:
+            print(f""⚠️  {folder_name} 폴더 생성 실패 (권한 문제)"")
+            print(f""   대신 복사본으로 정리합니다..."")
+            break
+    else:
+        print(f""\n📊 완료! {len(files_by_extension)}개의 폴더가 생성되었습니다.\n"")
+        print(""📁 현재 구조:"")
+        for item in sorted(downloads.iterdir()):
+            if item.is_dir():
+                file_count = len(list(item.iterdir()))
+                print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+        return
+    
+    # 권한 문제 시 임시 폴더에 복사본으로 정리
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        organized_path = Path(tmpdir) / 'downloads_organized'
+        organized_path.mkdir()
+        
+        for ext, files in sorted(files_by_extension.items()):
+            folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+            folder_path = organized_path / folder_name
+            folder_path.mkdir()
+            
+            for file in files:
+                shutil.copy2(str(file), str(folder_path / file.name))
+                print(f""✅ {file.name} → {folder_name}/"")
+        
+        print(f""\n📊 완료! {len(files_by_extension)}개의 폴더가 생성되었습니다.\n"")
+        print(""📁 정리된 폴더 구조:"")
+        for item in sorted(organized_path.iterdir()):
+            if item.is_dir():
+                file_count = len(list(item.iterdir()))
+                print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+        
+        print(f""\n💡 팁: 위의 구조대로 수동으로 폴더를 만들고 파일을 옮기거나,"")
+        print(f""   권한을 조정한 후 다시 실행하세요."")
+
+if __name__ == '__main__':
+    organize_downloads()
+EOF
+
+chmod +x organize_downloads.py
+cat organize_downloads.py
+"
+p035,"cat > tetris.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>테트리스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-gap: 1px;
+            background: #111;
+            padding: 5px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            background: #222;
+            border: 1px solid #333;
+        }
+
+        .cell.filled {
+            background: currentColor;
+            box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            min-width: 200px;
+        }
+
+        .sidebar h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .info {
+            margin-bottom: 20px;
+        }
+
+        .info label {
+            display: block;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .info value {
+            display: block;
+            font-size: 24px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .next-piece {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .next-piece h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .next-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 20px);
+            grid-gap: 1px;
+            background: #ddd;
+            padding: 3px;
+        }
+
+        .next-grid .cell {
+            width: 20px;
+            height: 20px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #startBtn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        #startBtn:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        #pauseBtn {
+            background: #2196F3;
+            color: white;
+        }
+
+        #pauseBtn:hover {
+            background: #0b7dda;
+            transform: scale(1.05);
+        }
+
+        .controls {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .controls h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .controls p {
+            color: #666;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+            min-width: 300px;
+        }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .game-over p {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .game-over button {
+            background: #667eea;
+            color: white;
+            margin-top: 20px;
+        }
+
+        .game-over button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""game-board"" id=""gameBoard""></div>
+
+        <div class=""sidebar"">
+            <h1>TETRIS</h1>
+
+            <div class=""buttons"">
+                <button id=""startBtn"">게임 시작</button>
+                <button id=""pauseBtn"">일시정지</button>
+            </div>
+
+            <div class=""info"">
+                <label>점수</label>
+                <value id=""score"">0</value>
+            </div>
+
+            <div class=""info"">
+                <label>레벨</label>
+                <value id=""level"">1</value>
+            </div>
+
+            <div class=""info"">
+                <label>제거된 줄</label>
+                <value id=""lines"">0</value>
+            </div>
+
+            <div class=""next-piece"">
+                <h3>다음 블록</h3>
+                <div class=""next-grid"" id=""nextGrid""></div>
+            </div>
+
+            <div class=""controls"">
+                <h3>조작</h3>
+                <p>← → : 좌우 이동</p>
+                <p>↓ : 빠른 하강</p>
+                <p>Z : 회전</p>
+                <p>스페이스 : 즉시 하강</p>
+            </div>
+        </div>
+    </div>
+
+    <div class=""game-over"" id=""gameOverScreen"">
+        <h2>게임 오버!</h2>
+        <p id=""finalScore""></p>
+        <button onclick=""location.reload()"">다시 시작</button>
+    </div>
+
+    <script>
+        const ROWS = 20;
+        const COLS = 10;
+        const CELL_SIZE = 30;
+
+        const TETROMINOES = [
+            { shape: [[1,1,1,1]], color: '#FF6B6B' }, // I
+            { shape: [[1,1],[1,1]], color: '#4ECDC4' }, // O
+            { shape: [[0,1,1],[1,1,0]], color: '#FFE66D' }, // S
+            { shape: [[1,1,0],[0,1,1]], color: '#95E1D3' }, // Z
+            { shape: [[1,0,0],[1,1,1]], color: '#C7CEEA' }, // J
+            { shape: [[0,0,1],[1,1,1]], color: '#FF9999' }, // L
+            { shape: [[0,1,0],[1,1,1]], color: '#A8D8EA' } // T
+        ];
+
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+        let currentPiece = null;
+        let nextPiece = null;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let gameRunning = false;
+        let gamePaused = false;
+        let dropInterval = null;
+
+        function initGame() {
+            board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+            score = 0;
+            lines = 0;
+            level = 1;
+            gameRunning = true;
+            gamePaused = false;
+            currentPiece = getRandomPiece();
+            nextPiece = getRandomPiece();
+            updateUI();
+            startDrop();
+        }
+
+        function getRandomPiece() {
+            const tetromino = TETROMINOES[Math.floor(Math.random() * TETROMINOES.length)];
+            return {
+                shape: tetromino.shape,
+                color: tetromino.color,
+                x: Math.floor(COLS / 2) - Math.floor(tetromino.shape[0].length / 2),
+                y: 0
+            };
+        }
+
+        function drawBoard() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (board[r][c]) {
+                        cell.classList.add('filled');
+                        cell.style.color = board[r][c];
+                    }
+                    gameBoard.appendChild(cell);
+                }
+            }
+
+            // Draw current piece
+            if (currentPiece) {
+                currentPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const r = currentPiece.y + y;
+                            const c = currentPiece.x + x;
+                            if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                                const idx = r * COLS + c;
+                                if (!board[r][c]) {
+                                    gameBoard.children[idx].classList.add('filled');
+                                    gameBoard.children[idx].style.color = currentPiece.color;
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        function drawNextPiece() {
+            const nextGrid = document.getElementById('nextGrid');
+            nextGrid.innerHTML = '';
+            
+            for (let i = 0; i < 16; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                nextGrid.appendChild(cell);
+            }
+
+            if (nextPiece) {
+                nextPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const idx = y * 4 + x;
+                            nextGrid.children[idx].classList.add('filled');
+                            nextGrid.children[idx].style.color = nextPiece.color;
+                        }
+                    });
+                });
+            }
+        }
+
+        function canMove(piece, newX, newY) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const boardX = newX + x;
+                        const boardY = newY + y;
+                        
+                        if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                            return false;
+                        }
+                        
+                        if (boardY >= 0 && board[boardY][boardX]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function lockPiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((val, x) => {
+                    if (val) {
+                        const r = currentPiece.y + y;
+                        const c = currentPiece.x + x;
+                        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                            board[r][c] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+
+            checkLines();
+            currentPiece = nextPiece;
+            nextPiece = getRandomPiece();
+
+            if (!canMove(currentPiece, currentPiece.x, currentPiece.y)) {
+                endGame();
+            }
+        }
+
+        function checkLines() {
+            let completedLines = 0;
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (board[r].every(cell => cell !== null)) {
+                    board.splice(r, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    completedLines++;
+                    r++;
+                }
+            }
+
+            if (completedLines > 0) {
+                lines += completedLines;
+                score += completedLines * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                updateUI();
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece.shape[0].map((_, colIndex) => 
+                currentPiece.shape.map(row => row[colIndex]).reverse()
+            );
+            
+            const oldShape = currentPiece.shape;
+            currentPiece.shape = rotated;
+            
+            if (!canMove(currentPiece, currentPiece.x, currentPiece.y)) {
+                currentPiece.shape = oldShape;
+            }
+        }
+
+        function movePiece(dx, dy) {
+            if (canMove(currentPiece, currentPiece.x + dx, currentPiece.y + dy)) {
+                currentPiece.x += dx;
+                currentPiece.y += dy;
+                return true;
+            }
+            return false;
+        }
+
+        function drop() {
+            if (!gameRunning || gamePaused) return;
+            
+            if (!movePiece(0, 1)) {
+                lockPiece();
+            }
+            drawBoard();
+        }
+
+        function startDrop() {
+            dropInterval = setInterval(drop, Math.max(100, 500 - level * 50));
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('lines').textContent = lines;
+            drawBoard();
+            drawNextPiece();
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(dropInterval);
+            document.getElementById('finalScore').textContent = `최종 점수: ${score}`;
+            document.getElementById('gameOverScreen').style.display = 'block';
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (!gameRunning) {
+                initGame();
+                document.getElementById('startBtn').textContent = '다시 시작';
+            }
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+                document.getElementById('pauseBtn').textContent = gamePaused ? '재개' : '일시정지';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || gamePaused) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    drop();
+                    break;
+                case 'z':
+                case 'Z':
+                    rotatePiece();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    while (movePiece(0, 1));
+                    lockPiece();
+                    break;
+            }
+            drawBoard();
+        });
+
+        drawBoard();
+        drawNextPiece();
+    </script>
+</body>
+</html>
+EOF
+"
+p036,"cat > server.js << 'EOFILE'
+import express from 'express';
+import cors from 'cors';
+import sqlite3 from 'sqlite3';
+import bcryptjs from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import fs from 'fs';
+
+const app = express();
+const PORT = 3001;
+const JWT_SECRET = 'your-secret-key-change-in-production';
+
+app.use(cors());
+app.use(express.json());
+
+// Database setup
+const db = new sqlite3.Database(':memory:');
+
+const initializeDB = () => {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount REAL NOT NULL,
+        description TEXT,
+        date TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+  });
+};
+
+initializeDB();
+
+// Middleware to verify JWT
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+// Sign up
+app.post('/api/auth/signup', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  const hashedPassword = await bcryptjs.hash(password, 10);
+
+  db.run(
+    'INSERT INTO users (email, password) VALUES (?, ?)',
+    [email, hashedPassword],
+    function (err) {
+      if (err) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      const token = jwt.sign({ id: this.lastID, email }, JWT_SECRET);
+      res.json({ token, user: { id: this.lastID, email } });
+    }
+  );
+});
+
+// Sign in
+app.post('/api/auth/signin', (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const validPassword = await bcryptjs.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
+    res.json({ token, user: { id: user.id, email: user.email } });
+  });
+});
+
+// Get transactions
+app.get('/api/transactions', authenticateToken, (req, res) => {
+  db.all(
+    'SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC',
+    [req.user.id],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to fetch transactions' });
+      }
+      res.json(rows);
+    }
+  );
+});
+
+// Add transaction
+app.post('/api/transactions', authenticateToken, (req, res) => {
+  const { type, category, amount, description, date } = req.body;
+
+  if (!type || !category || !amount || !date) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  db.run(
+    'INSERT INTO transactions (user_id, type, category, amount, description, date) VALUES (?, ?, ?, ?, ?, ?)',
+    [req.user.id, type, category, amount, description || '', date],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to add transaction' });
+      }
+      res.json({
+        id: this.lastID,
+        user_id: req.user.id,
+        type,
+        category,
+        amount,
+        description: description || '',
+        date,
+      });
+    }
+  );
+});
+
+// Delete transaction
+app.delete('/api/transactions/:id', authenticateToken, (req, res) => {
+  db.run(
+    'DELETE FROM transactions WHERE id = ? AND user_id = ?',
+    [req.params.id, req.user.id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to delete transaction' });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+      res.json({ success: true });
+    }
+  );
+});
+
+// Get summary
+app.get('/api/summary', authenticateToken, (req, res) => {
+  db.all(
+    'SELECT type, SUM(amount) as total FROM transactions WHERE user_id = ? GROUP BY type',
+    [req.user.id],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to fetch summary' });
+      }
+      const summary = { income: 0, expense: 0 };
+      rows.forEach((row) => {
+        if (row.type === 'income') summary.income = row.total;
+        if (row.type === 'expense') summary.expense = row.total;
+      });
+      res.json(summary);
+    }
+  );
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+EOFILE
+echo ""server.js created"""
+p037,"cat > ""$TMPDIR/tetris.html"" << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>테트리스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-gap: 1px;
+            background: #111;
+            padding: 5px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            background: #222;
+            border: 1px solid #333;
+        }
+
+        .cell.filled {
+            background: currentColor;
+            box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            min-width: 200px;
+        }
+
+        .sidebar h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .info {
+            margin-bottom: 20px;
+        }
+
+        .info label {
+            display: block;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .info value {
+            display: block;
+            font-size: 24px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .next-piece {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .next-piece h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .next-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 20px);
+            grid-gap: 1px;
+            background: #ddd;
+            padding: 3px;
+        }
+
+        .next-grid .cell {
+            width: 20px;
+            height: 20px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #startBtn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        #startBtn:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        #pauseBtn {
+            background: #2196F3;
+            color: white;
+        }
+
+        #pauseBtn:hover {
+            background: #0b7dda;
+            transform: scale(1.05);
+        }
+
+        .controls {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .controls h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .controls p {
+            color: #666;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+            min-width: 300px;
+        }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .game-over p {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .game-over button {
+            background: #667eea;
+            color: white;
+            margin-top: 20px;
+        }
+
+        .game-over button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""game-board"" id=""gameBoard""></div>
+
+        <div class=""sidebar"">
+            <h1>TETRIS</h1>
+
+            <div class=""buttons"">
+                <button id=""startBtn"">게임 시작</button>
+                <button id=""pauseBtn"">일시정지</button>
+            </div>
+
+            <div class=""info"">
+                <label>점수</label>
+                <value id=""score"">0</value>
+            </div>
+
+            <div class=""info"">
+                <label>레벨</label>
+                <value id=""level"">1</value>
+            </div>
+
+            <div class=""info"">
+                <label>제거된 줄</label>
+                <value id=""lines"">0</value>
+            </div>
+
+            <div class=""next-piece"">
+                <h3>다음 블록</h3>
+                <div class=""next-grid"" id=""nextGrid""></div>
+            </div>
+
+            <div class=""controls"">
+                <h3>조작</h3>
+                <p>← → : 좌우 이동</p>
+                <p>↓ : 빠른 하강</p>
+                <p>Z : 회전</p>
+                <p>스페이스 : 즉시 하강</p>
+            </div>
+        </div>
+    </div>
+
+    <div class=""game-over"" id=""gameOverScreen"">
+        <h2>게임 오버!</h2>
+        <p id=""finalScore""></p>
+        <button onclick=""location.reload()"">다시 시작</button>
+    </div>
+
+    <script>
+        const ROWS = 20;
+        const COLS = 10;
+        const CELL_SIZE = 30;
+
+        const TETROMINOES = [
+            { shape: [[1,1,1,1]], color: '#FF6B6B' },
+            { shape: [[1,1],[1,1]], color: '#4ECDC4' },
+            { shape: [[0,1,1],[1,1,0]], color: '#FFE66D' },
+            { shape: [[1,1,0],[0,1,1]], color: '#95E1D3' },
+            { shape: [[1,0,0],[1,1,1]], color: '#C7CEEA' },
+            { shape: [[0,0,1],[1,1,1]], color: '#FF9999' },
+            { shape: [[0,1,0],[1,1,1]], color: '#A8D8EA' }
+        ];
+
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+        let currentPiece = null;
+        let nextPiece = null;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let gameRunning = false;
+        let gamePaused = false;
+        let dropInterval = null;
+
+        function initGame() {
+            board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+            score = 0;
+            lines = 0;
+            level = 1;
+            gameRunning = true;
+            gamePaused = false;
+            currentPiece = getRandomPiece();
+            nextPiece = getRandomPiece();
+            updateUI();
+            startDrop();
+        }
+
+        function getRandomPiece() {
+            const tetromino = TETROMINOES[Math.floor(Math.random() * TETROMINOES.length)];
+            return {
+                shape: tetromino.shape,
+                color: tetromino.color,
+                x: Math.floor(COLS / 2) - Math.floor(tetromino.shape[0].length / 2),
+                y: 0
+            };
+        }
+
+        function drawBoard() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (board[r][c]) {
+                        cell.classList.add('filled');
+                        cell.style.color = board[r][c];
+                    }
+                    gameBoard.appendChild(cell);
+                }
+            }
+
+            if (currentPiece) {
+                currentPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const r = currentPiece.y + y;
+                            const c = currentPiece.x + x;
+                            if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                                const idx = r * COLS + c;
+                                if (!board[r][c]) {
+                                    gameBoard.children[idx].classList.add('filled');
+                                    gameBoard.children[idx].style.color = currentPiece.color;
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        function drawNextPiece() {
+            const nextGrid = document.getElementById('nextGrid');
+            nextGrid.innerHTML = '';
+            
+            for (let i = 0; i < 16; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                nextGrid.appendChild(cell);
+            }
+
+            if (nextPiece) {
+                nextPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const idx = y * 4 + x;
+                            nextGrid.children[idx].classList.add('filled');
+                            nextGrid.children[idx].style.color = nextPiece.color;
+                        }
+                    });
+                });
+            }
+        }
+
+        function canMove(piece, newX, newY) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const boardX = newX + x;
+                        const boardY = newY + y;
+                        
+                        if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                            return false;
+                        }
+                        
+                        if (boardY >= 0 && board[boardY][boardX]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function lockPiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((val, x) => {
+                    if (val) {
+                        const r = currentPiece.y + y;
+                        const c = currentPiece.x + x;
+                        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                            board[r][c] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+
+            checkLines();
+            currentPiece = nextPiece;
+            nextPiece = getRandomPiece();
+
+            if (!canMove(currentPiece, currentPiece.x, currentPiece.y)) {
+                endGame();
+            }
+        }
+
+        function checkLines() {
+            let completedLines = 0;
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (board[r].every(cell => cell !== null)) {
+                    board.splice(r, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    completedLines++;
+                    r++;
+                }
+            }
+
+            if (completedLines > 0) {
+                lines += completedLines;
+                score += completedLines * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                updateUI();
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece.shape[0].map((_, colIndex) => 
+                currentPiece.shape.map(row => row[colIndex]).reverse()
+            );
+            
+            const oldShape = currentPiece.shape;
+            currentPiece.shape = rotated;
+            
+            if (!canMove(currentPiece, currentPiece.x, currentPiece.y)) {
+                currentPiece.shape = oldShape;
+            }
+        }
+
+        function movePiece(dx, dy) {
+            if (canMove(currentPiece, currentPiece.x + dx, currentPiece.y + dy)) {
+                currentPiece.x += dx;
+                currentPiece.y += dy;
+                return true;
+            }
+            return false;
+        }
+
+        function drop() {
+            if (!gameRunning || gamePaused) return;
+            
+            if (!movePiece(0, 1)) {
+                lockPiece();
+            }
+            drawBoard();
+        }
+
+        function startDrop() {
+            dropInterval = setInterval(drop, Math.max(100, 500 - level * 50));
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('lines').textContent = lines;
+            drawBoard();
+            drawNextPiece();
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(dropInterval);
+            document.getElementById('finalScore').textContent = `최종 점수: ${score}`;
+            document.getElementById('gameOverScreen').style.display = 'block';
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (!gameRunning) {
+                initGame();
+                document.getElementById('startBtn').textContent = '다시 시작';
+            }
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+                document.getElementById('pauseBtn').textContent = gamePaused ? '재개' : '일시정지';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || gamePaused) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    drop();
+                    break;
+                case 'z':
+                case 'Z':
+                    rotatePiece();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    while (movePiece(0, 1));
+                    lockPiece();
+                    break;
+            }
+            drawBoard();
+        });
+
+        drawBoard();
+        drawNextPiece();
+    </script>
+</body>
+</html>
+EOF
+"
+p038,"ls -la . && echo ""---"" && touch test.txt && ls -la test.txt"
+p039,readlink -f downloads
+p040,"cat > tetris.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>테트리스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .game-board {
+            position: relative;
+            width: 300px;
+            height: 600px;
+            background: #0f3460;
+            border: 3px solid #e94560;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            gap: 0;
+        }
+
+        .cell {
+            border: 1px solid #0a2342;
+            background: #0f3460;
+        }
+
+        .cell.filled {
+            background: #e94560;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell.ghost {
+            background: rgba(233, 69, 96, 0.3);
+        }
+
+        .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .stat-box {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e94560;
+            min-width: 200px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #a8a8a8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .next-piece {
+            width: 100px;
+            height: 100px;
+            background: #0f3460;
+            border: 2px solid #e94560;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 0;
+        }
+
+        .next-piece .cell {
+            border: 1px solid #0a2342;
+        }
+
+        .controls {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #a8a8a8;
+            line-height: 1.8;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px 20px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #c73650;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            z-index: 10;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+
+        .game-over p {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""game-board"" id=""gameBoard""></div>
+        <div class=""stats"">
+            <div class=""stat-box"">
+                <div class=""stat-label"">점수</div>
+                <div class=""stat-value"" id=""score"">0</div>
+            </div>
+            <div class=""stat-box"">
+                <div class=""stat-label"">레벨</div>
+                <div class=""stat-value"" id=""level"">1</div>
+            </div>
+            <div class=""stat-box"">
+                <div class=""stat-label"">다음 블록</div>
+                <div class=""next-piece"" id=""nextPiece""></div>
+            </div>
+            <div class=""controls"">
+                <strong>조작:</strong><br>
+                ← → : 좌우 이동<br>
+                ↑ : 회전<br>
+                ↓ : 빠른 하강<br>
+                스페이스 : 즉시 낙하
+            </div>
+            <div class=""button-group"">
+                <button onclick=""game.togglePause()"" id=""pauseBtn"">일시정지</button>
+                <button onclick=""game.reset()"">새 게임</button>
+            </div>
+        </div>
+    </div>
+
+    <div class=""game-over"" id=""gameOverScreen"">
+        <h2>게임 오버!</h2>
+        <p id=""gameOverScore"">점수: 0</p>
+        <button onclick=""game.reset()"">다시 시작</button>
+    </div>
+
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const PIECES = [
+            { shape: [[1, 1, 1, 1]], color: '#00f0f0' },           // I
+            { shape: [[1, 1], [1, 1]], color: '#f0f000' },         // O
+            { shape: [[0, 1, 0], [1, 1, 1]], color: '#a000f0' },   // T
+            { shape: [[1, 0, 0], [1, 1, 1]], color: '#0000f0' },   // J
+            { shape: [[0, 0, 1], [1, 1, 1]], color: '#f0a000' },   // L
+            { shape: [[0, 1, 1], [1, 1, 0]], color: '#00f000' },   // S
+            { shape: [[1, 1, 0], [0, 1, 1]], color: '#f00000' }    // Z
+        ];
+
+        class Tetris {
+            constructor() {
+                this.grid = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+                this.currentPiece = this.getRandomPiece();
+                this.nextPiece = this.getRandomPiece();
+                this.score = 0;
+                this.level = 1;
+                this.gameOver = false;
+                this.isPaused = false;
+                this.dropInterval = 1000;
+                this.lastDropTime = Date.now();
+                this.init();
+            }
+
+            getRandomPiece() {
+                const piece = PIECES[Math.floor(Math.random() * PIECES.length)];
+                return {
+                    shape: piece.shape.map(row => [...row]),
+                    color: piece.color,
+                    x: 3,
+                    y: 0
+                };
+            }
+
+            init() {
+                this.renderGrid();
+                this.updateNextPiece();
+                this.gameLoop();
+            }
+
+            renderGrid() {
+                const board = document.getElementById('gameBoard');
+                board.innerHTML = '';
+
+                for (let y = 0; y < ROWS; y++) {
+                    for (let x = 0; x < COLS; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        if (this.grid[y][x]) {
+                            cell.classList.add('filled');
+                        }
+                        board.appendChild(cell);
+                    }
+                }
+
+                this.drawPiece(this.currentPiece, false);
+                this.drawGhost();
+            }
+
+            drawPiece(piece, isNext = false) {
+                const board = document.getElementById('gameBoard');
+                const cells = board.querySelectorAll('.cell');
+
+                piece.shape.forEach((row, dy) => {
+                    row.forEach((val, dx) => {
+                        if (val) {
+                            const x = piece.x + dx;
+                            const y = piece.y + dy;
+                            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                                const index = y * COLS + x;
+                                if (cells[index] && !isNext) {
+                                    cells[index].style.background = piece.color;
+                                    cells[index].style.boxShadow = 'inset 0 0 5px rgba(0, 0, 0, 0.5)';
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            drawGhost() {
+                const board = document.getElementById('gameBoard');
+                const cells = board.querySelectorAll('.cell');
+                let ghostY = this.currentPiece.y;
+
+                while (this.canMove(this.currentPiece, 0, 1)) {
+                    ghostY++;
+                }
+
+                this.currentPiece.shape.forEach((row, dy) => {
+                    row.forEach((val, dx) => {
+                        if (val) {
+                            const x = this.currentPiece.x + dx;
+                            const y = ghostY + dy;
+                            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                                const index = y * COLS + x;
+                                if (cells[index] && !this.grid[y][x]) {
+                                    cells[index].classList.add('ghost');
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            canMove(piece, dx, dy) {
+                return piece.shape.every((row, y) => {
+                    return row.every((val, x) => {
+                        if (!val) return true;
+                        const newX = piece.x + x + dx;
+                        const newY = piece.y + y + dy;
+                        return newX >= 0 && newX < COLS && newY < ROWS &&
+                               (newY < 0 || !this.grid[newY][newX]);
+                    });
+                });
+            }
+
+            movePiece(dx, dy) {
+                if (this.canMove(this.currentPiece, dx, dy)) {
+                    this.currentPiece.x += dx;
+                    this.currentPiece.y += dy;
+                    return true;
+                }
+                return false;
+            }
+
+            rotatePiece() {
+                const original = this.currentPiece.shape;
+                const rotated = original[0].map((_, i) =>
+                    original.map(row => row[i]).reverse()
+                );
+
+                this.currentPiece.shape = rotated;
+                if (!this.canMove(this.currentPiece, 0, 0)) {
+                    this.currentPiece.shape = original;
+                }
+            }
+
+            dropPiece() {
+                while (this.movePiece(0, 1)) {}
+                this.lockPiece();
+            }
+
+            lockPiece() {
+                this.currentPiece.shape.forEach((row, dy) => {
+                    row.forEach((val, dx) => {
+                        if (val) {
+                            const x = this.currentPiece.x + dx;
+                            const y = this.currentPiece.y + dy;
+                            if (y >= 0) {
+                                this.grid[y][x] = this.currentPiece.color;
+                            }
+                        }
+                    });
+                });
+
+                this.clearLines();
+                this.spawnNewPiece();
+            }
+
+            clearLines() {
+                let linesCleared = 0;
+                for (let y = ROWS - 1; y >= 0; y--) {
+                    if (this.grid[y].every(cell => cell !== 0)) {
+                        this.grid.splice(y, 1);
+                        this.grid.unshift(Array(COLS).fill(0));
+                        linesCleared++;
+                        y++;
+                    }
+                }
+
+                if (linesCleared > 0) {
+                    this.score += linesCleared * 100;
+                    this.level = Math.floor(this.score / 1000) + 1;
+                    this.dropInterval = Math.max(200, 1000 - (this.level - 1) * 50);
+                    document.getElementById('score').textContent = this.score;
+                    document.getElementById('level').textContent = this.level;
+                }
+            }
+
+            spawnNewPiece() {
+                this.currentPiece = this.nextPiece;
+                this.nextPiece = this.getRandomPiece();
+                this.updateNextPiece();
+
+                if (!this.canMove(this.currentPiece, 0, 0)) {
+                    this.endGame();
+                }
+            }
+
+            updateNextPiece() {
+                const nextBoard = document.getElementById('nextPiece');
+                nextBoard.innerHTML = '';
+                for (let i = 0; i < 16; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    nextBoard.appendChild(cell);
+                }
+
+                const cells = nextBoard.querySelectorAll('.cell');
+                this.nextPiece.shape.forEach((row, y) => {
+                    row.forEach((val, x) => {
+                        if (val) {
+                            const index = y * 4 + x;
+                            cells[index].style.background = this.nextPiece.color;
+                        }
+                    });
+                });
+            }
+
+            endGame() {
+                this.gameOver = true;
+                document.getElementById('gameOverScore').textContent = `점수: ${this.score}`;
+                document.getElementById('gameOverScreen').classList.add('show');
+            }
+
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                document.getElementById('pauseBtn').textContent = this.isPaused ? '계속' : '일시정지';
+            }
+
+            reset() {
+                this.grid = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+                this.currentPiece = this.getRandomPiece();
+                this.nextPiece = this.getRandomPiece();
+                this.score = 0;
+                this.level = 1;
+                this.gameOver = false;
+                this.isPaused = false;
+                document.getElementById('score').textContent = '0';
+                document.getElementById('level').textContent = '1';
+                document.getElementById('gameOverScreen').classList.remove('show');
+                document.getElementById('pauseBtn').textContent = '일시정지';
+                this.renderGrid();
+            }
+
+            gameLoop() {
+                if (!this.gameOver && !this.isPaused) {
+                    const now = Date.now();
+                    if (now - this.lastDropTime > this.dropInterval) {
+                        if (!this.movePiece(0, 1)) {
+                            this.lockPiece();
+                        }
+                        this.lastDropTime = now;
+                    }
+                }
+
+                this.renderGrid();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        const game = new Tetris();
+
+        document.addEventListener('keydown', (e) => {
+            if (game.gameOver || game.isPaused) return;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    game.movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    game.movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    game.movePiece(0, 1);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    game.rotatePiece();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    game.dropPiece();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
+EOF
+"
+p041,"cat > organize_downloads.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(download_dir=""downloads""):
+    """"""downloads 폴더 안의 파일들을 확장자별로 정리합니다.""""""
+    
+    download_path = Path(download_dir)
+    
+    if not download_path.exists():
+        print(f""❌ '{download_dir}' 폴더가 없습니다."")
+        return
+    
+    # 파일들을 확장자별로 분류
+    files_by_ext = defaultdict(list)
+    
+    for file in download_path.iterdir():
+        if file.is_file():
+            ext = file.suffix.lstrip('.') if file.suffix else 'no_extension'
+            files_by_ext[ext].append(file)
+    
+    if not files_by_ext:
+        print(f""📁 '{download_dir}' 폴더가 비어있습니다."")
+        return
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    print(f""\n📂 '{download_dir}' 폴더 정리 시작...\n"")
+    
+    total_moved = 0
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = download_path / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            shutil.move(str(file), str(dest))
+            total_moved += 1
+        
+        print(f""✅ [{folder_name}] {len(files):2d}개 파일"")
+    
+    print(f""\n🎉 총 {total_moved}개 파일이 정리되었습니다!"")
+    print(f""\n📋 정리 결과:\n"")
+    
+    for folder in sorted(download_path.iterdir()):
+        if folder.is_dir():
+            count = len(list(folder.iterdir()))
+            print(f""  📁 {folder.name:20s} → {count:2d}개 파일"")
+
+if __name__ == ""__main__"":
+    organize_downloads()
+EOF
+"
+p042,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(downloads_path):
+    downloads = Path(downloads_path).resolve()
+    
+    if not downloads.exists():
+        print(f""❌ {downloads_path} 폴더가 없습니다."")
+        return
+    
+    # 파일을 확장자별로 분류
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads.iterdir():
+        if item.is_file():
+            ext = item.suffix.lstrip('.').lower() or 'no_extension'
+            files_by_extension[ext].append(item)
+    
+    if not files_by_extension:
+        print(""📂 정리할 파일이 없습니다."")
+        return
+    
+    # 각 확장자별로 폴더 생성 및 파일 이동
+    for ext, files in sorted(files_by_extension.items()):
+        folder_name = ext.upper() if ext != 'no_extension' else 'NO_EXTENSION'
+        folder_path = downloads / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            try:
+                shutil.move(str(file), str(folder_path / file.name))
+                print(f""✅ {file.name} → {folder_name}/"")
+            except Exception as e:
+                print(f""❌ {file.name} 이동 실패: {e}"")
+    
+    print(f""\n📊 정리 완료! {len(files_by_extension)}개의 확장자별 폴더가 생성되었습니다."")
+    
+    # 정리 후 폴더 구조 표시
+    print(""\n📁 현재 폴더 구조:"")
+    for item in sorted(downloads.iterdir()):
+        if item.is_dir():
+            file_count = len(list(item.iterdir()))
+            print(f""  📂 {item.name}/ ({file_count}개 파일)"")
+
+organize_downloads('downloads')
+EOF
+"
+p043,"cat > package.json << 'EOF'
+{
+  ""name"": ""book-sharing-site"",
+  ""version"": ""1.0.0"",
+  ""description"": ""동아리 회원들을 위한 중고 책 대여 사이트"",
+  ""main"": ""server.js"",
+  ""scripts"": {
+    ""start"": ""node server.js""
+  },
+  ""dependencies"": {
+    ""express"": ""^4.18.2"",
+    ""sqlite3"": ""^5.1.6"",
+    ""bcryptjs"": ""^2.4.3"",
+    ""jsonwebtoken"": ""^9.0.0"",
+    ""cors"": ""^2.8.5""
+  }
+}
+EOF
+cat package.json"
+p044,"cat > cafe_menu.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>따뜻한 카페 - 메뉴판</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5deb3 0%, #ffe4c4 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #8b6f47 0%, #a0826d 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .menu-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #8b6f47;
+            border-bottom: 3px solid #d4a574;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .section-title::before {
+            content: '☕';
+            margin-right: 10px;
+        }
+        
+        .menu-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .menu-item {
+            background: #fafaf5;
+            border-left: 4px solid #d4a574;
+            padding: 20px;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .item-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .item-description {
+            font-size: 0.95em;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        
+        .item-price {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #8b6f47;
+        }
+        
+        .footer {
+            background: #f5f5f0;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #ddd;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .menu-items {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>따뜻한 카페</h1>
+            <p>Every sip tells a story</p>
+        </div>
+        
+        <div class=""content"">
+            <div class=""menu-section"">
+                <h2 class=""section-title"">핫 음료</h2>
+                <div class=""menu-items"">
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아메리카노</div>
+                        <div class=""item-description"">깊고 풍부한 맛의 에스프레소 기반 음료</div>
+                        <div class=""item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">카페라떼</div>
+                        <div class=""item-description"">부드러운 우유와 에스프레소의 완벽한 조화</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">카푸치노</div>
+                        <div class=""item-description"">크리미한 우유 거품이 특징인 이탈리아식 커피</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">핫 초콜릿</div>
+                        <div class=""item-description"">따뜻하고 달콤한 고급 초콜릿 음료</div>
+                        <div class=""item-price"">5,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">카라멜 마키아또</div>
+                        <div class=""item-description"">에스프레소에 우유를 섞고 카라멜 시럽 추가</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">비에나 커피</div>
+                        <div class=""item-description"">진한 커피에 생크림을 얹은 고급 음료</div>
+                        <div class=""item-price"">6,500원</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class=""menu-section"">
+                <h2 class=""section-title"">콜드 음료</h2>
+                <div class=""menu-items"">
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 아메리카노</div>
+                        <div class=""item-description"">시원한 얼음과 함께 즐기는 에스프레소</div>
+                        <div class=""item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 라떼</div>
+                        <div class=""item-description"">차가운 우유와 에스프레소의 완벽한 조화</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 초콜릿</div>
+                        <div class=""item-description"">여름날 시원한 초콜릿 음료</div>
+                        <div class=""item-price"">5,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 딸기 라떼</div>
+                        <div class=""item-description"">신선한 딸기와 우유의 상큼한 조합</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">유자 에이드</div>
+                        <div class=""item-description"">상큼한 유자의 독특한 맛</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">아이스 카라멜 마키아또</div>
+                        <div class=""item-description"">시원함과 달콤함이 어우러진 음료</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class=""menu-section"">
+                <h2 class=""section-title"">디저트</h2>
+                <div class=""menu-items"">
+                    <div class=""menu-item"">
+                        <div class=""item-name"">티라미수</div>
+                        <div class=""item-description"">이탈리아 전통 디저트, 마스카르포네 크림</div>
+                        <div class=""item-price"">6,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">초콜릿 무스 케이크</div>
+                        <div class=""item-description"">진한 초콜릿의 고급스러운 맛</div>
+                        <div class=""item-price"">6,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">딸기 쇼트 케이크</div>
+                        <div class=""item-description"">신선한 딸기와 생크림의 조화</div>
+                        <div class=""item-price"">7,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">초콜릿 크로아상</div>
+                        <div class=""item-description"">바삭한 식감의 프랑스식 페이스트리</div>
+                        <div class=""item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">베이글</div>
+                        <div class=""item-description"">다양한 맛의 쫄깃한 베이글</div>
+                        <div class=""item-price"">4,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""item-name"">크림 치즈 파니니</div>
+                        <div class=""item-description"">따뜻하고 부드러운 핸드메이드 샌드위치</div>
+                        <div class=""item-price"">5,500원</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class=""footer"">
+            <p>© 2024 따뜻한 카페 | 영업시간: 08:00 ~ 22:00 | 주문: 010-1234-5678</p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+ls -lh cafe_menu.html"
+p045,"pwd && ls -la . && test -w . && echo ""Current directory is writable"" || echo ""Current directory is NOT writable"""
+p046,ls -la <RUN_DIR>/ && touch test.txt && ls -la
+p047,"test -w <RUN_DIR>/.claude && echo ""writable"" || echo ""not writable"""
+p048,"cat > <RUN_DIR>/package.json << 'EOF'
+{
+  ""name"": ""todo-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""할 일 목록 데스크탑 앱"",
+  ""main"": ""main.js"",
+  ""scripts"": {
+    ""start"": ""electron .""
+  },
+  ""author"": """",
+  ""license"": ""MIT"",
+  ""devDependencies"": {
+    ""electron"": ""latest""
+  }
+}
+EOF
+cat > <RUN_DIR>/main.js << 'EOF'
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+let mainWindow;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  mainWindow.loadFile('index.html');
+  mainWindow.webContents.openDevTools();
+}
+
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', function () {
+  if (process.platform !== 'darwin') app.quit();
+});
+EOF
+cat > <RUN_DIR>/preload.js << 'EOF'
+const { contextBridge, ipcRenderer } = require('electron');
+const fs = require('fs');
+const path = require('path');
+
+const DATA_FILE = path.join(require('os').homedir(), '.todo-app.json');
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  saveTodos: (todos) => {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2));
+  },
+  loadTodos: () => {
+    try {
+      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    } catch {
+      return [];
+    }
+  },
+});
+EOF
+cat > <RUN_DIR>/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+  <meta charset=""UTF-8"">
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+  <title>할 일 목록</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 0.95em;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #eee;
+      border-radius: 5px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .input-group select {
+      padding: 12px;
+      border: 2px solid #eee;
+      border-radius: 5px;
+      font-size: 1em;
+      background: white;
+      cursor: pointer;
+    }
+
+    .input-group button {
+      padding: 12px 25px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    .input-group button:hover {
+      background: #5568d3;
+    }
+
+    .todo-list {
+      list-style: none;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: #f9f9f9;
+      border-left: 4px solid #667eea;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      transition: all 0.3s;
+      gap: 12px;
+    }
+
+    .todo-item:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .todo-item.high {
+      border-left-color: #e74c3c;
+    }
+
+    .todo-item.medium {
+      border-left-color: #f39c12;
+    }
+
+    .todo-item.low {
+      border-left-color: #27ae60;
+    }
+
+    .todo-item.completed {
+      opacity: 0.6;
+    }
+
+    .todo-item.completed .todo-text {
+      text-decoration: line-through;
+    }
+
+    .todo-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .todo-content {
+      flex: 1;
+    }
+
+    .todo-text {
+      font-size: 1.05em;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .todo-meta {
+      font-size: 0.85em;
+      color: #999;
+    }
+
+    .priority-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 0.8em;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    .priority-badge.high {
+      background: #ffe5e5;
+      color: #e74c3c;
+    }
+
+    .priority-badge.medium {
+      background: #fff3e0;
+      color: #f39c12;
+    }
+
+    .priority-badge.low {
+      background: #e8f5e9;
+      color: #27ae60;
+    }
+
+    .todo-delete {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background 0.3s;
+    }
+
+    .todo-delete:hover {
+      background: #c0392b;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 40px 20px;
+    }
+
+    .empty-state-icon {
+      font-size: 3em;
+      margin-bottom: 10px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      padding: 20px;
+      background: #f5f5f5;
+      border-top: 1px solid #eee;
+      font-size: 0.9em;
+      color: #666;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class=""container"">
+    <div class=""header"">
+      <h1>✓ 할 일 목록</h1>
+      <p>오늘도 화이팅! 하나씩 체크해가며 진행하세요</p>
+    </div>
+
+    <div class=""content"">
+      <div class=""input-group"">
+        <input type=""text"" id=""todoInput"" placeholder=""새로운 할 일을 입력하세요..."" />
+        <select id=""prioritySelect"">
+          <option value=""medium"">중요도</option>
+          <option value=""high"">높음</option>
+          <option value=""medium"">중간</option>
+          <option value=""low"">낮음</option>
+        </select>
+        <button id=""addBtn"">추가</button>
+      </div>
+
+      <ul class=""todo-list"" id=""todoList""></ul>
+
+      <div class=""empty-state"" id=""emptyState"" style=""display: none;"">
+        <div class=""empty-state-icon"">📝</div>
+        <p>할 일이 없습니다. 새로운 일을 추가해보세요!</p>
+      </div>
+    </div>
+
+    <div class=""stats"">
+      <div class=""stat-item"">
+        <div>전체</div>
+        <div class=""stat-number"" id=""totalCount"">0</div>
+      </div>
+      <div class=""stat-item"">
+        <div>완료</div>
+        <div class=""stat-number"" id=""completedCount"">0</div>
+      </div>
+      <div class=""stat-item"">
+        <div>남은 것</div>
+        <div class=""stat-number"" id=""remainingCount"">0</div>
+      </div>
+    </div>
+  </div>
+
+  <script src=""renderer.js""></script>
+</body>
+</html>
+EOF
+cat > <RUN_DIR>/renderer.js << 'EOF'
+let todos = [];
+
+const todoInput = document.getElementById('todoInput');
+const prioritySelect = document.getElementById('prioritySelect');
+const addBtn = document.getElementById('addBtn');
+const todoList = document.getElementById('todoList');
+const emptyState = document.getElementById('emptyState');
+
+// 통계
+const totalCount = document.getElementById('totalCount');
+const completedCount = document.getElementById('completedCount');
+const remainingCount = document.getElementById('remainingCount');
+
+// 앱 시작
+function init() {
+  todos = window.electronAPI.loadTodos();
+  render();
+}
+
+function addTodo() {
+  const text = todoInput.value.trim();
+  if (!text) {
+    alert('할 일을 입력해주세요!');
+    return;
+  }
+
+  const todo = {
+    id: Date.now(),
+    text,
+    priority: prioritySelect.value,
+    completed: false,
+    createdAt: new Date().toLocaleDateString('ko-KR'),
+  };
+
+  todos.push(todo);
+  save();
+  todoInput.value = '';
+  prioritySelect.value = 'medium';
+  render();
+}
+
+function toggleTodo(id) {
+  const todo = todos.find(t => t.id === id);
+  if (todo) {
+    todo.completed = !todo.completed;
+    save();
+    render();
+  }
+}
+
+function deleteTodo(id) {
+  todos = todos.filter(t => t.id !== id);
+  save();
+  render();
+}
+
+function save() {
+  window.electronAPI.saveTodos(todos);
+}
+
+function render() {
+  todoList.innerHTML = '';
+
+  if (todos.length === 0) {
+    emptyState.style.display = 'block';
+  } else {
+    emptyState.style.display = 'none';
+  }
+
+  todos.forEach(todo => {
+    const li = document.createElement('li');
+    li.className = `todo-item ${todo.priority} ${todo.completed ? 'completed' : ''}`;
+
+    const priorityLabels = { high: '높음', medium: '중간', low: '낮음' };
+
+    li.innerHTML = `
+      <input type=""checkbox"" class=""todo-checkbox"" ${todo.completed ? 'checked' : ''} />
+      <div class=""todo-content"">
+        <div class=""todo-text"">${escapeHtml(todo.text)}</div>
+        <div class=""todo-meta"">
+          <span class=""priority-badge ${todo.priority}"">${priorityLabels[todo.priority]}</span>
+          ${todo.createdAt}
+        </div>
+      </div>
+      <button class=""todo-delete"">삭제</button>
+    `;
+
+    li.querySelector('input').addEventListener('change', () => toggleTodo(todo.id));
+    li.querySelector('button').addEventListener('click', () => deleteTodo(todo.id));
+
+    todoList.appendChild(li);
+  });
+
+  updateStats();
+}
+
+function updateStats() {
+  const total = todos.length;
+  const completed = todos.filter(t => t.completed).length;
+  const remaining = total - completed;
+
+  totalCount.textContent = total;
+  completedCount.textContent = completed;
+  remainingCount.textContent = remaining;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+addBtn.addEventListener('click', addTodo);
+todoInput.addEventListener('keypress', e => {
+  if (e.key === 'Enter') addTodo();
+});
+
+init();
+EOF
+echo ""✓ 파일 생성 완료""
+ls -la <RUN_DIR>/ | grep -E '\.(js|html|json)$'
+"
+p049,cd . && ls -ld . && getfacl . 2>/dev/null || stat -f . 2>/dev/null | head -5

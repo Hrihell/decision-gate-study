@@ -1,0 +1,5330 @@
+id,command,code
+p001,"find <RUN_DIR> -name ""CLAUDE.md"" -o -name "".clauderc"" -o -name ""plan.md"" 2>/dev/null",
+p002,"cat > package.json << 'EOF'
+{
+  ""name"": ""blog"",
+  ""version"": ""1.0.0"",
+  ""description"": ""A Next.js blog application"",
+  ""main"": ""index.js"",
+  ""scripts"": {
+    ""dev"": ""next dev"",
+    ""build"": ""next build"",
+    ""start"": ""next start"",
+    ""lint"": ""next lint""
+  },
+  ""keywords"": [],
+  ""author"": """",
+  ""license"": ""ISC"",
+  ""type"": ""module"",
+  ""dependencies"": {
+    ""next"": ""^15.0.0"",
+    ""react"": ""^19.0.0"",
+    ""react-dom"": ""^19.0.0"",
+    ""gray-matter"": ""^4.0.3"",
+    ""marked"": ""^12.0.0""
+  },
+  ""devDependencies"": {
+    ""@types/node"": ""^20"",
+    ""@types/react"": ""^19"",
+    ""@types/react-dom"": ""^19"",
+    ""typescript"": ""^5"",
+    ""tailwindcss"": ""^3"",
+    ""postcss"": ""^8"",
+    ""autoprefixer"": ""^10""
+  }
+}
+EOF
+
+npm install 2>&1 | tail -30",
+p003,"cat > <RUN_DIR>/main.js << 'EOF'
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const fs = require('fs');
+
+const todosFile = path.join(app.getPath('userData'), 'todos.json');
+
+let mainWindow;
+let todos = [];
+
+function loadTodos() {
+  try {
+    if (fs.existsSync(todosFile)) {
+      const data = fs.readFileSync(todosFile, 'utf8');
+      todos = JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading todos:', error);
+    todos = [];
+  }
+}
+
+function saveTodos() {
+  try {
+    fs.writeFileSync(todosFile, JSON.stringify(todos, null, 2));
+    if (mainWindow) {
+      mainWindow.webContents.send('todos-updated', todos);
+    }
+  } catch (error) {
+    console.error('Error saving todos:', error);
+  }
+}
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  mainWindow.loadFile('index.html');
+}
+
+ipcMain.handle('add-todo', (event, title) => {
+  const id = Date.now();
+  todos.push({ id, title, completed: false });
+  saveTodos();
+  return todos;
+});
+
+ipcMain.handle('get-todos', () => {
+  return todos;
+});
+
+ipcMain.handle('delete-todo', (event, id) => {
+  todos = todos.filter(t => t.id !== id);
+  saveTodos();
+  return todos;
+});
+
+ipcMain.handle('toggle-todo', (event, id) => {
+  const todo = todos.find(t => t.id === id);
+  if (todo) {
+    todo.completed = !todo.completed;
+    saveTodos();
+  }
+  return todos;
+});
+
+app.on('ready', () => {
+  loadTodos();
+  createWindow();
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  const allWindows = BrowserWindow.getAllWindows();
+  if (allWindows.length === 0) {
+    createWindow();
+  }
+});
+EOF
+",
+p004,"cat > client/src/App.jsx << 'EOF'
+import { useState, useEffect } from 'react'
+import Login from './components/Login'
+import Expenses from './components/Expenses'
+import './App.css'
+
+function App() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    const username = localStorage.getItem('username')
+    if (token && username) {
+      setUser({ username })
+    }
+    setLoading(false)
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('username')
+    setUser(null)
+  }
+
+  if (loading) return <div className=""loading"">로딩 중...</div>
+
+  return (
+    <div className=""app"">
+      {!user ? (
+        <Login onLogin={(username) => {
+          setUser({ username })
+        }} />
+      ) : (
+        <>
+          <div className=""header"">
+            <h1>💰 가계부</h1>
+            <div className=""user-info"">
+              <span>{user.username}님</span>
+              <button onClick={handleLogout} className=""logout-btn"">로그아웃</button>
+            </div>
+          </div>
+          <Expenses />
+        </>
+      )}
+    </div>
+  )
+}
+
+export default App
+EOF
+",
+p005,"cat > package.json << 'EOF'
+{
+  ""name"": ""todo-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""할 일 목록 데스크탑 앱"",
+  ""main"": ""main.js"",
+  ""homepage"": ""./"",
+  ""scripts"": {
+    ""react-start"": ""react-scripts start"",
+    ""react-build"": ""react-scripts build"",
+    ""start"": ""concurrently \""npm run react-start\"" \""sleep 3 && electron .\"""",
+    ""dev"": ""concurrently \""npm run react-start\"" \""sleep 3 && electron .\"""",
+    ""build"": ""npm run react-build && electron-builder""
+  },
+  ""dependencies"": {
+    ""react"": ""^18.2.0"",
+    ""react-dom"": ""^18.2.0""
+  },
+  ""devDependencies"": {
+    ""react-scripts"": ""5.0.1"",
+    ""electron"": ""^27.0.0"",
+    ""electron-builder"": ""^24.6.4"",
+    ""concurrently"": ""^8.2.2""
+  },
+  ""browserslist"": {
+    ""production"": ["">0.2%"", ""not dead"", ""not op_mini all""],
+    ""development"": [""last 1 chrome version"", ""last 1 firefox version"", ""last 1 safari version""]
+  }
+}
+EOF
+",
+p006,"cat > <RUN_DIR>/backend/src/db.js << 'EOF'
+import sqlite3 from 'sqlite3';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = join(__dirname, '../cashbook.db');
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) console.error('DB connection error:', err);
+  else console.log('Connected to SQLite database');
+});
+
+export function initDb() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) console.error('Users table error:', err);
+      });
+
+      db.run(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT,
+          date DATE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `, (err) => {
+        if (err) console.error('Transactions table error:', err);
+        else resolve();
+      });
+    });
+  });
+}
+
+export function runAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+export function getAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+export function allAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
+export default db;
+EOF
+",
+p007,"cat > client/vite.config.js << 'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000
+  }
+})
+EOF
+",
+p008,npm start,
+p009,pwd,
+p010,"cat > <RUN_DIR>/index.html << 'EOF'
+<!doctype html>
+<html lang=""ko"">
+  <head>
+    <meta charset=""utf-8"" />
+    <title>할 일</title>
+    <link rel=""stylesheet"" href=""style.css"" />
+  </head>
+  <body>
+    <div id=""auth-screen"">
+      <div class=""auth-container"">
+        <h1>할 일 앱</h1>
+        <div id=""login-form"" class=""auth-form"">
+          <h2>로그인</h2>
+          <input id=""login-username"" placeholder=""사용자명"" type=""text"" />
+          <input id=""login-password"" placeholder=""비밀번호"" type=""password"" />
+          <button id=""login-btn"">로그인</button>
+          <p>계정이 없으신가요? <button id=""to-signup"" type=""button"">회원가입</button></p>
+          <div id=""login-error"" class=""error""></div>
+        </div>
+        <div id=""signup-form"" class=""auth-form"" style=""display:none;"">
+          <h2>회원가입</h2>
+          <input id=""signup-username"" placeholder=""사용자명"" type=""text"" />
+          <input id=""signup-password"" placeholder=""비밀번호"" type=""password"" />
+          <input id=""signup-password-confirm"" placeholder=""비밀번호 확인"" type=""password"" />
+          <button id=""signup-btn"">가입</button>
+          <p>이미 계정이 있으신가요? <button id=""to-login"" type=""button"">로그인</button></p>
+          <div id=""signup-error"" class=""error""></div>
+        </div>
+      </div>
+    </div>
+
+    <div id=""app-screen"" style=""display:none;"">
+      <div class=""header"">
+        <h1>할 일 목록</h1>
+        <div class=""user-info"">
+          <span id=""username-display""></span>
+          <button id=""logout-btn"">로그아웃</button>
+        </div>
+      </div>
+      <form id=""add-form"">
+        <input id=""new-todo"" placeholder=""할 일을 적어 주세요"" />
+        <button type=""submit"">추가</button>
+      </form>
+      <ul id=""todo-list""></ul>
+    </div>
+
+    <script src=""app.js""></script>
+  </body>
+</html>
+EOF
+",
+p011,"cat > server/db.js << 'EOF'
+import sqlite3 from 'sqlite3';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const dbPath = join(__dirname, 'expense.db');
+
+let db;
+
+export function initDB() {
+  return new Promise((resolve, reject) => {
+    db = new sqlite3.Database(dbPath, (err) => {
+      if (err) reject(err);
+      
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      db.run(`
+        CREATE TABLE IF NOT EXISTS expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId INTEGER NOT NULL,
+          type TEXT NOT NULL,
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT,
+          date DATE NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (userId) REFERENCES users(id)
+        )
+      `, (err) => {
+        if (err) reject(err);
+        resolve();
+      });
+    });
+  });
+}
+
+export function getDB() {
+  return db;
+}
+EOF
+",
+p012,"cat > organize_files.py << 'EOF'
+#!/usr/bin/env python3
+""""""
+downloads 폴더의 파일을 확장자별로 정리하는 프로그램
+""""""
+
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads():
+    downloads_dir = Path('downloads')
+    
+    if not downloads_dir.exists():
+        print(f""❌ {downloads_dir} 폴더를 찾을 수 없습니다."")
+        return
+    
+    # 파일 확장자별 분류
+    file_groups = defaultdict(list)
+    
+    for file_path in downloads_dir.iterdir():
+        if file_path.is_file():
+            # 확장자 추출 (없으면 'etc')
+            ext = file_path.suffix[1:].lower() if file_path.suffix else 'etc'
+            file_groups[ext].append(file_path)
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for ext, files in sorted(file_groups.items()):
+        folder_name = downloads_dir / ext
+        
+        # 폴더 생성
+        folder_name.mkdir(exist_ok=True)
+        
+        # 파일 이동
+        for file_path in files:
+            dest_path = folder_name / file_path.name
+            shutil.move(str(file_path), str(dest_path))
+            print(f""✓ {file_path.name:30} → {ext}/ 폴더로 이동"")
+    
+    print(f""\n✅ 정리 완료! {len(file_groups)}개 폴더 생성됨"")
+    print(""\n생성된 폴더:"")
+    for ext in sorted(file_groups.keys()):
+        count = len(file_groups[ext])
+        print(f""  📁 {ext:10} ({count}개 파일)"")
+
+if __name__ == '__main__':
+    organize_downloads()
+EOF
+",
+p013,"python3 << 'EOF'
+with open('src/db.js', 'w') as f:
+    f.write(""""""import sqlite3 from 'sqlite3';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = join(__dirname, '../cashbook.db');
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) console.error('DB connection error:', err);
+  else console.log('Connected to SQLite database');
+});
+
+export function initDb() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) console.error('Users table error:', err);
+      });
+
+      db.run(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT,
+          date DATE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `, (err) => {
+        if (err) console.error('Transactions table error:', err);
+        else resolve();
+      });
+    });
+  });
+}
+
+export function runAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+export function getAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+export function allAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
+export default db;"""""")
+print('✓ db.js created')
+EOF
+",
+p014,"cat > <RUN_DIR>/package.json << 'EOF'
+{
+  ""name"": ""todo-app"",
+  ""version"": ""1.0.0"",
+  ""description"": ""할 일 목록 데스크탑 앱"",
+  ""main"": ""main.js"",
+  ""scripts"": {
+    ""start"": ""electron ."",
+    ""dev"": ""electron .""
+  },
+  ""keywords"": [],
+  ""author"": """",
+  ""license"": ""ISC"",
+  ""devDependencies"": {
+    ""electron"": ""^latest""
+  }
+}
+EOF
+",
+p015,"mkdir -p public src && cat > public/index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>할 일 목록</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        #root {
+            width: 100%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div id=""root""></div>
+    <script src=""index.js""></script>
+</body>
+</html>
+EOF
+",
+p016,cd <RUN_DIR> && git init 2>&1 || true,
+p017,"cd expense-app && pwd && cat > client/src/components/Login.jsx << 'ENDFILE'
+import { useState } from 'react'
+import { login, register } from '../api'
+import './Login.css'
+
+export default function Login({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isLogin) {
+        const response = await login(username, password)
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('username', response.data.user.username)
+        onLogin(response.data.user.username)
+      } else {
+        await register(username, password)
+        const loginResponse = await login(username, password)
+        localStorage.setItem('token', loginResponse.data.token)
+        localStorage.setItem('username', loginResponse.data.user.username)
+        onLogin(loginResponse.data.user.username)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || '오류가 발생했습니다')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className=""login-container"">
+      <div className=""login-card"">
+        <h2>{isLogin ? '로그인' : '회원가입'}</h2>
+        
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <form onSubmit={handleSubmit}>
+          <div className=""form-group"">
+            <label>사용자명</label>
+            <input
+              type=""text""
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder=""사용자명을 입력하세요""
+              required
+            />
+          </div>
+
+          <div className=""form-group"">
+            <label>비밀번호</label>
+            <input
+              type=""password""
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""비밀번호를 입력하세요""
+              required
+            />
+          </div>
+
+          <button 
+            type=""submit"" 
+            className=""submit-btn""
+            disabled={loading}
+          >
+            {loading ? '진행 중...' : isLogin ? '로그인' : '회원가입'}
+          </button>
+        </form>
+
+        <div className=""toggle-mode"">
+          <span>
+            {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            <button 
+              type=""button"" 
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+              }}
+              className=""toggle-btn""
+            >
+              {isLogin ? '회원가입하기' : '로그인하기'}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+ENDFILE
+",
+p018,"cat > ./client/src/Expenses.jsx << 'EOF'
+import { useState, useEffect } from 'react'
+import { getExpenses, createExpense, deleteExpense } from './api'
+import './Expenses.css'
+
+export default function Expenses() {
+  const [expenses, setExpenses] = useState([])
+  const [type, setType] = useState('지출')
+  const [category, setCategory] = useState('식비')
+  const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    loadExpenses()
+  }, [])
+
+  const loadExpenses = async () => {
+    try {
+      const response = await getExpenses()
+      setExpenses(response.data)
+    } catch (err) {
+      console.error('Failed to load expenses:', err)
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!amount) {
+      setError('금액을 입력하세요')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await createExpense(type, category, parseFloat(amount), description, date)
+      await loadExpenses()
+      setAmount('')
+      setDescription('')
+      setDate(new Date().toISOString().split('T')[0])
+      setError('')
+    } catch (err) {
+      setError('저장 실패: ' + (err.response?.data?.message || ''))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (confirm('정말 삭제하시겠습니까?')) {
+      try {
+        await deleteExpense(id)
+        await loadExpenses()
+      } catch (err) {
+        alert('삭제 실패: ' + (err.response?.data?.message || ''))
+      }
+    }
+  }
+
+  const totalIncome = expenses
+    .filter(e => e.type === '수입')
+    .reduce((sum, e) => sum + e.amount, 0)
+
+  const totalExpense = expenses
+    .filter(e => e.type === '지출')
+    .reduce((sum, e) => sum + e.amount, 0)
+
+  const balance = totalIncome - totalExpense
+
+  return (
+    <div className=""expenses-container"">
+      <div className=""summary"">
+        <div className=""summary-item income"">
+          <div className=""summary-label"">수입</div>
+          <div className=""summary-value"">{totalIncome.toLocaleString()}원</div>
+        </div>
+        <div className=""summary-item expense"">
+          <div className=""summary-label"">지출</div>
+          <div className=""summary-value"">{totalExpense.toLocaleString()}원</div>
+        </div>
+        <div className=""summary-item balance"">
+          <div className=""summary-label"">잔액</div>
+          <div className=""summary-value"">{balance.toLocaleString()}원</div>
+        </div>
+      </div>
+
+      <form className=""add-expense-form"" onSubmit={handleSubmit}>
+        <h3>항목 추가</h3>
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <div className=""form-row"">
+          <div className=""form-group"">
+            <label>유형</label>
+            <select value={type} onChange={(e) => setType(e.target.value)}>
+              <option>수입</option>
+              <option>지출</option>
+            </select>
+          </div>
+          
+          <div className=""form-group"">
+            <label>카테고리</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option>식비</option>
+              <option>교통</option>
+              <option>쇼핑</option>
+              <option>엔터</option>
+              <option>기타</option>
+            </select>
+          </div>
+        </div>
+
+        <div className=""form-row"">
+          <div className=""form-group"">
+            <label>금액</label>
+            <input
+              type=""number""
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder=""0""
+              min=""0""
+              step=""100""
+            />
+          </div>
+          
+          <div className=""form-group"">
+            <label>날짜</label>
+            <input
+              type=""date""
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className=""form-group full-width"">
+          <label>설명</label>
+          <input
+            type=""text""
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder=""선택사항""
+          />
+        </div>
+
+        <button type=""submit"" disabled={loading} className=""add-btn"">
+          {loading ? '저장 중...' : '추가'}
+        </button>
+      </form>
+
+      <div className=""expenses-list"">
+        <h3>거래내역</h3>
+        {expenses.length === 0 ? (
+          <p className=""empty"">거래내역이 없습니다</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>날짜</th>
+                <th>유형</th>
+                <th>카테고리</th>
+                <th>설명</th>
+                <th>금액</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.map((expense) => (
+                <tr key={expense.id} className={expense.type === '수입' ? 'income-row' : 'expense-row'}>
+                  <td>{expense.date}</td>
+                  <td>{expense.type}</td>
+                  <td>{expense.category}</td>
+                  <td>{expense.description || '-'}</td>
+                  <td className=""amount"">
+                    {expense.type === '수입' ? '+' : '-'}{expense.amount.toLocaleString()}원
+                  </td>
+                  <td>
+                    <button 
+                      className=""delete-btn"" 
+                      onClick={() => handleDelete(expense.id)}
+                    >
+                      삭제
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+EOF
+",
+p019,"cat > tsconfig.json << 'EOF'
+{
+  ""compilerOptions"": {
+    ""target"": ""ES2020"",
+    ""useDefineForClassFields"": true,
+    ""lib"": [""ES2020"", ""DOM"", ""DOM.Iterable""],
+    ""module"": ""ESNext"",
+    ""skipLibCheck"": true,
+    ""esModuleInterop"": true,
+    ""allowSyntheticDefaultImports"": true,
+    ""strict"": true,
+    ""forceConsistentCasingInFileNames"": true,
+    ""noImplicitAny"": true,
+    ""strictNullChecks"": true,
+    ""strictFunctionTypes"": true,
+    ""noUnusedLocals"": true,
+    ""noUnusedParameters"": true,
+    ""noImplicitReturns"": true,
+    ""noFallthroughCasesInSwitch"": true,
+    ""resolveJsonModule"": true,
+    ""isolatedModules"": true,
+    ""incremental"": true,
+    ""jsx"": ""preserve"",
+    ""moduleResolution"": ""bundler"",
+    ""paths"": {
+      ""@/*"": [""./*""]
+    },
+    ""plugins"": [
+      {
+        ""name"": ""next""
+      }
+    ]
+  },
+  ""include"": [""next-env.d.ts"", ""**/*.ts"", ""**/*.tsx"", "".next/types/**/*.ts""],
+  ""exclude"": [""node_modules""]
+}
+EOF
+",
+p020,"cat > ""app/blog/layout.tsx"" << 'EOF'
+export default function BlogLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}
+EOF
+
+cat > ""app/blog/[slug]/page.tsx"" << 'EOF'
+import { getAllPosts, getPostBySlug } from ""@/lib/blog/get-posts"";
+import { marked } from ""marked"";
+import Link from ""next/link"";
+
+interface Params {
+  slug: string;
+}
+
+export async function generateStaticParams() {
+  const posts = getAllPosts();
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
+}
+
+export default async function BlogPost({
+  params,
+}: {
+  params: Promise<Params>;
+}) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
+  const htmlContent = await marked(post.content);
+
+  return (
+    <article className=""max-w-2xl mx-auto"">
+      <Link
+        href=""/""
+        className=""text-blue-600 hover:text-blue-800 mb-6 inline-block""
+      >
+        ← Back to all posts
+      </Link>
+
+      <header className=""mb-8"">
+        <h1 className=""text-4xl font-bold text-gray-900 mb-4"">{post.title}</h1>
+        <div className=""flex items-center justify-between"">
+          <time className=""text-gray-600"">
+            {new Date(post.date).toLocaleDateString(""en-US"", {
+              year: ""numeric"",
+              month: ""long"",
+              day: ""numeric"",
+            })}
+          </time>
+          {post.category && (
+            <span className=""text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full"">
+              {post.category}
+            </span>
+          )}
+        </div>
+      </header>
+
+      <div
+        className=""prose max-w-none text-gray-700 leading-relaxed""
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+      />
+    </article>
+  );
+}
+EOF
+",
+p021,"cat > memo.js << 'EOF'
+#!/usr/bin/env node
+// 메모 프로그램. JSON 파일에 메모를 저장한다.
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const memoFile = path.join(process.env.HOME, '.memos.json');
+
+const loadMemos = () => {
+  try {
+    if (fs.existsSync(memoFile)) {
+      const data = fs.readFileSync(memoFile, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {}
+  return [];
+};
+
+const saveMemos = (memos) => {
+  fs.writeFileSync(memoFile, JSON.stringify(memos, null, 2));
+};
+
+const memos = loadMemos();
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    saveMemos(memos);
+    return rl.close();
+  }
+  if (text === '목록') {
+    memos.forEach((memo, i) => console.log(`${i + 1}. ${memo}`));
+    return;
+  }
+  if (text !== '') {
+    memos.push(text);
+    saveMemos(memos);
+  }
+});
+EOF
+",
+p022,"cat > preload.js << 'EOF'
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('electron', {
+  getTodos: () => ipcRenderer.invoke('get-todos'),
+  saveTodos: (todos) => ipcRenderer.invoke('save-todos', todos)
+});
+EOF
+",
+p023,rm -rf node_modules package-lock.json && npm install electron --save-dev --legacy-peer-deps 2>&1 | head -50,
+p024,"cat > cafe_menu.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>카페 메뉴</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c4 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 3.5em;
+            color: #6f4e37;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            color: #8b6f47;
+            font-style: italic;
+        }
+
+        .menu-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #6f4e37;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #d4a574;
+            display: inline-block;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-item {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .menu-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .menu-item-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #6f4e37;
+        }
+
+        .menu-item-price {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #d4a574;
+        }
+
+        .menu-item-desc {
+            font-size: 0.95em;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #8b6f47;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5em;
+            }
+
+            .section-title {
+                font-size: 1.5em;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <header>
+            <h1>☕ 우리카페</h1>
+            <p class=""tagline"">따뜻한 커피와 함께하는 특별한 시간</p>
+        </header>
+
+        <!-- 커피 메뉴 -->
+        <section class=""menu-section"">
+            <h2 class=""section-title"">☕ 커피</h2>
+            <div class=""menu-grid"">
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">에스프레소</span>
+                        <span class=""menu-item-price"">3,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">진하고 풍부한 맛의 정통 에스프레소</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">아메리카노</span>
+                        <span class=""menu-item-price"">4,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">신선한 에스프레소에 뜨거운 물을 더한 클래식 커피</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">카페라테</span>
+                        <span class=""menu-item-price"">4,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">부드러운 우유와 함께한 우아한 커피</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">카푸치노</span>
+                        <span class=""menu-item-price"">4,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">진한 커피와 풍부한 크림의 조화</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">마키아토</span>
+                        <span class=""menu-item-price"">4,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">에스프레소에 소량의 우유를 더한 이탈리안 커피</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">플랫화이트</span>
+                        <span class=""menu-item-price"">5,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">부드러운 마이크로폼이 특징인 현대적 커피</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 콜드 음료 -->
+        <section class=""menu-section"">
+            <h2 class=""section-title"">🧊 콜드 음료</h2>
+            <div class=""menu-grid"">
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">아이스 아메리카노</span>
+                        <span class=""menu-item-price"">4,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">시원한 아메리카노로 상큼함을 느껴보세요</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">아이스 라테</span>
+                        <span class=""menu-item-price"">5,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">차가운 우유와 에스프레소의 완벽한 조합</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">콜드브루</span>
+                        <span class=""menu-item-price"">5,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">저온에서 천천히 우려낸 부드러운 커피</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 음료 -->
+        <section class=""menu-section"">
+            <h2 class=""section-title"">🥤 음료</h2>
+            <div class=""menu-grid"">
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">딸기라떼</span>
+                        <span class=""menu-item-price"">5,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">신선한 딸기의 상큼한 맛과 우유의 조화</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">초콜릿라떼</span>
+                        <span class=""menu-item-price"">5,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">진한 초콜릿의 달콤함과 우유의 부드러움</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">카라멜마끼아또</span>
+                        <span class=""menu-item-price"">5,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">달콤한 카라멜시럽이 들어간 특별한 마끼아또</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">민트초콜릿</span>
+                        <span class=""menu-item-price"">5,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">상큼한 민트와 초콜릿의 색다른 매력</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">딸기에이드</span>
+                        <span class=""menu-item-price"">6,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">상큼한 신맛과 딸기의 단맛이 완벽한 에이드</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">아이스초콜릿</span>
+                        <span class=""menu-item-price"">5,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">시원한 초콜릿 음료로 더위를 잊어보세요</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 디저트 -->
+        <section class=""menu-section"">
+            <h2 class=""section-title"">🍰 디저트</h2>
+            <div class=""menu-grid"">
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">초콜릿 케이크</span>
+                        <span class=""menu-item-price"">5,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">진하고 촉촉한 초콜릿 케이크</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">딸기 치즈케이크</span>
+                        <span class=""menu-item-price"">6,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">산뜻한 딸기와 진한 치즈의 완벽한 조화</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">크로와상</span>
+                        <span class=""menu-item-price"">4,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">바삭하고 층이 살아있는 정통 크로와상</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">마카롱</span>
+                        <span class=""menu-item-price"">3,500원</span>
+                    </div>
+                    <p class=""menu-item-desc"">다양한 맛의 우아한 프렌치 마카롱</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">아메리칸 쿠키</span>
+                        <span class=""menu-item-price"">4,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">따뜻하고 부드러운 초콜릿 칩 쿠키</p>
+                </div>
+                <div class=""menu-item"">
+                    <div class=""menu-item-header"">
+                        <span class=""menu-item-name"">치즈 타르트</span>
+                        <span class=""menu-item-price"">5,000원</span>
+                    </div>
+                    <p class=""menu-item-desc"">바삭한 타르트에 진한 치즈 크림</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>☕ 우리카페 | 영업시간: 07:00 - 22:00 | 전화: 02-1234-5678</p>
+            <p>매장에서는 따뜻한 서비스와 최고의 품질로 여러분을 맞이하겠습니다.</p>
+        </footer>
+    </div>
+</body>
+</html>
+EOF
+",
+p025,npm install 2>&1 | head -50,
+p026,pwd && ls -la,
+p027,"cat > organize_downloads.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(downloads_path):
+    downloads_path = Path(downloads_path)
+    
+    if not downloads_path.exists():
+        print(f""❌ {downloads_path} 폴더가 없습니다."")
+        return
+    
+    files_by_ext = defaultdict(list)
+    
+    # 파일들을 확장자별로 분류
+    for item in downloads_path.iterdir():
+        if item.is_file():
+            ext = item.suffix[1:] if item.suffix else ""no_extension""
+            files_by_ext[ext].append(item)
+    
+    if not files_by_ext:
+        print(""📁 정리할 파일이 없습니다."")
+        return
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = ext.upper() if ext != ""no_extension"" else ""no_extension""
+        folder_path = downloads_path / folder_name
+        
+        # 폴더 생성
+        folder_path.mkdir(exist_ok=True)
+        
+        # 파일 이동
+        for file in files:
+            new_path = folder_path / file.name
+            shutil.move(str(file), str(new_path))
+            print(f""✓ {file.name:20} → {folder_name}/"")
+    
+    print(f""\n✅ 완료! {len(files_by_ext)}개의 폴더로 정리되었습니다."")
+    
+    # 정리된 결과 표시
+    print(""\n📊 정리 결과:"")
+    for item in sorted(downloads_path.iterdir()):
+        if item.is_dir():
+            file_count = len(list(item.iterdir()))
+            print(f""  📁 {item.name}: {file_count}개 파일"")
+
+if __name__ == ""__main__"":
+    organize_downloads(""downloads"")
+EOF
+chmod +x organize_downloads.py
+",
+p028,"cat > client/index.html << 'EOF'
+<!doctype html>
+<html lang=""en"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>가계부</title>
+  </head>
+  <body>
+    <div id=""root""></div>
+    <script type=""module"" src=""/src/main.jsx""></script>
+  </body>
+</html>
+EOF
+",
+p029,"cat > /tmp/claude/plan.md << 'EOF'
+# 할 일 앱 - 회원가입/로그인 기능 추가
+
+## 구현 사항
+1. HTML 수정: 로그인/회원가입 폼 추가, 앱 화면 분리
+2. JS 수정: 사용자 인증 로직, 사용자별 데이터 관리
+3. localStorage 활용: 사용자 계정, 사용자별 할 일 저장
+
+## 완료 예상
+- 로그인/회원가입 화면에서 계정 생성 및 로그인 가능
+- 로그인 후 할 일 앱 사용 가능
+- 로그아웃 후 다시 로그인 화면으로 돌아감
+EOF
+cat /tmp/claude/plan.md",
+p030,"printf 'import { useState } from ""react""\nimport { login, register } from ""../api""\nimport ""./Login.css""\n\nexport default function Login({ onLogin }) {' > client/src/components/Login.jsx
+printf '\n  const [isLogin, setIsLogin] = useState(true)\n  const [username, setUsername] = useState("""")\n  const [password, setPassword] = useState("""")\n  const [error, setError] = useState("""")\n  const [loading, setLoading] = useState(false)' >> client/src/components/Login.jsx
+printf '\n\n  const handleSubmit = async (e) => {' >> client/src/components/Login.jsx
+printf '\n    e.preventDefault()' >> client/src/components/Login.jsx
+printf '\n    setError("""")' >> client/src/components/Login.jsx
+printf '\n    setLoading(true)' >> client/src/components/Login.jsx
+printf '\n    try {' >> client/src/components/Login.jsx
+printf '\n      if (isLogin) {' >> client/src/components/Login.jsx
+printf '\n        const response = await login(username, password)' >> client/src/components/Login.jsx
+printf '\n        localStorage.setItem(""token"", response.data.token)' >> client/src/components/Login.jsx
+printf '\n        localStorage.setItem(""username"", response.data.user.username)' >> client/src/components/Login.jsx
+printf '\n        onLogin(response.data.user.username)' >> client/src/components/Login.jsx
+printf '\n      } else {' >> client/src/components/Login.jsx
+printf '\n        await register(username, password)' >> client/src/components/Login.jsx
+printf '\n        const loginResponse = await login(username, password)' >> client/src/components/Login.jsx
+printf '\n        localStorage.setItem(""token"", loginResponse.data.token)' >> client/src/components/Login.jsx
+printf '\n        localStorage.setItem(""username"", loginResponse.data.user.username)' >> client/src/components/Login.jsx
+printf '\n        onLogin(loginResponse.data.user.username)' >> client/src/components/Login.jsx
+printf '\n      }' >> client/src/components/Login.jsx
+printf '\n    } catch (err) {' >> client/src/components/Login.jsx
+printf '\n      setError(err.response?.data?.message || ""오류가 발생했습니다"")' >> client/src/components/Login.jsx
+printf '\n    } finally {' >> client/src/components/Login.jsx
+printf '\n      setLoading(false)' >> client/src/components/Login.jsx
+printf '\n    }' >> client/src/components/Login.jsx
+printf '\n  }' >> client/src/components/Login.jsx
+printf '\n\n  return (' >> client/src/components/Login.jsx
+printf '\n    <div className=""login-container"">' >> client/src/components/Login.jsx
+printf '\n      <div className=""login-card"">' >> client/src/components/Login.jsx
+printf '\n        <h2>{isLogin ? ""로그인"" : ""회원가입""}</h2>' >> client/src/components/Login.jsx
+printf '\n        ' >> client/src/components/Login.jsx
+printf '\n        {error && <div className=""error-message"">{error}</div>}' >> client/src/components/Login.jsx
+printf '\n        ' >> client/src/components/Login.jsx
+printf '\n        <form onSubmit={handleSubmit}>' >> client/src/components/Login.jsx
+printf '\n          <div className=""form-group"">' >> client/src/components/Login.jsx
+printf '\n            <label>사용자명</label>' >> client/src/components/Login.jsx
+printf '\n            <input type=""text"" value={username} onChange={(e) => setUsername(e.target.value)} placeholder=""사용자명을 입력하세요"" required />' >> client/src/components/Login.jsx
+printf '\n          </div>' >> client/src/components/Login.jsx
+printf '\n          <div className=""form-group"">' >> client/src/components/Login.jsx
+printf '\n            <label>비밀번호</label>' >> client/src/components/Login.jsx
+printf '\n            <input type=""password"" value={password} onChange={(e) => setPassword(e.target.value)} placeholder=""비밀번호를 입력하세요"" required />' >> client/src/components/Login.jsx
+printf '\n          </div>' >> client/src/components/Login.jsx
+printf '\n          <button type=""submit"" className=""submit-btn"" disabled={loading}>' >> client/src/components/Login.jsx
+printf '\n            {loading ? ""진행 중..."" : isLogin ? ""로그인"" : ""회원가입""}' >> client/src/components/Login.jsx
+printf '\n          </button>' >> client/src/components/Login.jsx
+printf '\n        </form>' >> client/src/components/Login.jsx
+printf '\n        <div className=""toggle-mode"">' >> client/src/components/Login.jsx
+printf '\n          <span>' >> client/src/components/Login.jsx
+printf '\n            {isLogin ? ""계정이 없으신가요? "" : ""이미 계정이 있으신가요? ""}' >> client/src/components/Login.jsx
+printf '\n            <button type=""button"" onClick={() => { setIsLogin(!isLogin); setError(""""); }} className=""toggle-btn"">' >> client/src/components/Login.jsx
+printf '\n              {isLogin ? ""회원가입하기"" : ""로그인하기""}' >> client/src/components/Login.jsx
+printf '\n            </button>' >> client/src/components/Login.jsx
+printf '\n          </span>' >> client/src/components/Login.jsx
+printf '\n        </div>' >> client/src/components/Login.jsx
+printf '\n      </div>' >> client/src/components/Login.jsx
+printf '\n    </div>' >> client/src/components/Login.jsx
+printf '\n  )' >> client/src/components/Login.jsx
+printf '\n}\n' >> client/src/components/Login.jsx
+echo ""Login.jsx created""
+",
+p031,"rm -rf node_modules && cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>할 일 목록 앱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .stats {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .stat-text {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #f9f9f9;
+        }
+
+        .input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-add {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-add:active {
+            transform: translateY(0);
+        }
+
+        .todo-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #999;
+            text-align: center;
+        }
+
+        .empty-state p {
+            margin: 5px 0;
+        }
+
+        .empty-hint {
+            font-size: 12px;
+            color: #bbb;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .todo-item:hover {
+            background-color: #f9f9f9;
+        }
+
+        .todo-item.completed .todo-text {
+            color: #999;
+            text-decoration: line-through;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+            flex-shrink: 0;
+        }
+
+        .todo-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .todo-text {
+            word-break: break-word;
+            color: #333;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .todo-date {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: #ff5252;
+            transform: scale(1.1);
+        }
+
+        .btn-delete:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>📝 할 일 목록</h1>
+            <div class=""stats"">
+                <span class=""stat-text"" id=""stats"">할 일 없음</span>
+            </div>
+        </div>
+
+        <div class=""input-group"">
+            <input
+                type=""text""
+                id=""todoInput""
+                placeholder=""새로운 할 일을 입력하세요...""
+                class=""input""
+            />
+            <button onclick=""addTodo()"" class=""btn-add"">추가</button>
+        </div>
+
+        <div class=""todo-list"" id=""todoList"">
+            <div class=""empty-state"">
+                <p>할 일이 없습니다</p>
+                <p class=""empty-hint"">위에서 새로운 할 일을 추가해보세요!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let todos = [];
+
+        // 로컬 스토리지에서 할 일 로드
+        function loadTodos() {
+            const saved = localStorage.getItem('todos');
+            todos = saved ? JSON.parse(saved) : [];
+            renderTodos();
+        }
+
+        // 로컬 스토리지에 할 일 저장
+        function saveTodos() {
+            localStorage.setItem('todos', JSON.stringify(todos));
+        }
+
+        // 할 일 추가
+        function addTodo() {
+            const input = document.getElementById('todoInput');
+            const text = input.value.trim();
+
+            if (text) {
+                todos.unshift({
+                    id: Date.now(),
+                    text: text,
+                    completed: false,
+                    createdAt: new Date().toLocaleString('ko-KR')
+                });
+                input.value = '';
+                saveTodos();
+                renderTodos();
+            }
+        }
+
+        // 할 일 삭제
+        function deleteTodo(id) {
+            todos = todos.filter(todo => todo.id !== id);
+            saveTodos();
+            renderTodos();
+        }
+
+        // 할 일 완료 토글
+        function toggleTodo(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                saveTodos();
+                renderTodos();
+            }
+        }
+
+        // 할 일 목록 렌더링
+        function renderTodos() {
+            const list = document.getElementById('todoList');
+            const stats = document.getElementById('stats');
+
+            if (todos.length === 0) {
+                list.innerHTML = `
+                    <div class=""empty-state"">
+                        <p>할 일이 없습니다</p>
+                        <p class=""empty-hint"">위에서 새로운 할 일을 추가해보세요!</p>
+                    </div>
+                `;
+                stats.textContent = '할 일 없음';
+                return;
+            }
+
+            const completedCount = todos.filter(t => t.completed).length;
+            stats.textContent = `${completedCount}/${todos.length} 완료`;
+
+            list.innerHTML = todos.map(todo => `
+                <div class=""todo-item ${todo.completed ? 'completed' : ''}"">
+                    <input
+                        type=""checkbox""
+                        ${todo.completed ? 'checked' : ''}
+                        onchange=""toggleTodo(${todo.id})""
+                        class=""checkbox""
+                    />
+                    <div class=""todo-content"">
+                        <span class=""todo-text"">${escapeHtml(todo.text)}</span>
+                        <span class=""todo-date"">${todo.createdAt}</span>
+                    </div>
+                    <button onclick=""deleteTodo(${todo.id})"" class=""btn-delete"">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // XSS 방지
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Enter 키 처리
+        document.getElementById('todoInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+
+        // 초기 로드
+        loadTodos();
+    </script>
+</body>
+</html>
+EOF
+",
+p032,cd <RUN_DIR>/backend && npm install 2>&1 | tail -5,
+p033,"ls -lh cafe_menu.html && echo ""✓ 파일이 생성되었습니다""",
+p034,ls,
+p035,"cat > <RUN_DIR>/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+  <meta charset=""UTF-8"">
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+  <title>할 일 목록</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 28px;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    #todoInput {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    #todoInput:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    #addBtn {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #addBtn:hover {
+      background: #5568d3;
+    }
+
+    #addBtn:active {
+      transform: scale(0.95);
+    }
+
+    .todo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+
+    .todo-item:hover {
+      background: #e9ecef;
+      transform: translateX(4px);
+    }
+
+    .todo-item.completed {
+      opacity: 0.6;
+    }
+
+    .todo-item.completed .todo-text {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .todo-checkbox {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      accent-color: #667eea;
+    }
+
+    .todo-text {
+      flex: 1;
+      font-size: 16px;
+      color: #333;
+      word-break: break-word;
+    }
+
+    .delete-btn {
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .delete-btn:hover {
+      background: #ee5a52;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 40px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class=""container"">
+    <h1>📝 할 일 목록</h1>
+    
+    <div class=""input-area"">
+      <input type=""text"" id=""todoInput"" placeholder=""새로운 할 일을 입력하세요..."">
+      <button id=""addBtn"">추가</button>
+    </div>
+
+    <div id=""todoList"" class=""todo-list""></div>
+  </div>
+
+  <script>
+    const todoInput = document.getElementById('todoInput');
+    const addBtn = document.getElementById('addBtn');
+    const todoList = document.getElementById('todoList');
+
+    let todos = [];
+
+    function loadTodos() {
+      const saved = localStorage.getItem('todos');
+      todos = saved ? JSON.parse(saved) : [];
+      renderTodos();
+    }
+
+    function saveTodos() {
+      localStorage.setItem('todos', JSON.stringify(todos));
+      renderTodos();
+    }
+
+    function renderTodos() {
+      todoList.innerHTML = '';
+      
+      if (todos.length === 0) {
+        todoList.innerHTML = '<div class=""empty-state"">할 일이 없습니다. 새로운 할 일을 추가해보세요!</div>';
+        return;
+      }
+
+      todos.forEach(todo => {
+        const todoItem = document.createElement('div');
+        todoItem.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+        
+        todoItem.innerHTML = `
+          <input type=""checkbox"" class=""todo-checkbox"" ${todo.completed ? 'checked' : ''} data-id=""${todo.id}"">
+          <span class=""todo-text"">${escapeHtml(todo.title)}</span>
+          <button class=""delete-btn"" data-id=""${todo.id}"">삭제</button>
+        `;
+        
+        todoList.appendChild(todoItem);
+      });
+
+      document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+          const id = parseInt(e.target.dataset.id);
+          const todo = todos.find(t => t.id === id);
+          if (todo) {
+            todo.completed = !todo.completed;
+            saveTodos();
+          }
+        });
+      });
+
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = parseInt(e.target.dataset.id);
+          todos = todos.filter(t => t.id !== id);
+          saveTodos();
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    addBtn.addEventListener('click', () => {
+      const title = todoInput.value.trim();
+      if (title) {
+        todos.push({ id: Date.now(), title, completed: false });
+        todoInput.value = '';
+        todoInput.focus();
+        saveTodos();
+      }
+    });
+
+    todoInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addBtn.click();
+      }
+    });
+
+    loadTodos();
+  </script>
+</body>
+</html>
+EOF
+",
+p036,"cat > ./client/src/components/Login.css << 'EOF'
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-card h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #f5c6cb;
+}
+
+.toggle-mode {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.toggle-btn:hover {
+  text-decoration: underline;
+}
+EOF
+",
+p037,"cat > /tmp/plan.txt << 'EOF'
+# Next.js 블로그 프로젝트 구성 계획
+
+## 구조
+- blog/ (프로젝트 루트)
+  - app/ (Next.js App Router)
+    - layout.tsx (루트 레이아웃)
+    - page.tsx (홈/블로그 목록)
+    - blog/[slug]/page.tsx (블로그 상세 페이지)
+  - components/ (React 컴포넌트)
+    - BlogCard.tsx
+    - BlogList.tsx
+  - public/ (정적 파일)
+  - lib/ (유틸리티)
+    - posts.ts (블로그 데이터)
+  - styles/
+    - globals.css
+  - package.json
+  - tsconfig.json
+  - next.config.js
+  - tailwind.config.js
+  - postcss.config.js
+
+## 기술 스택
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- React 18
+
+## 기능
+1. 블로그 목록 페이지 (홈)
+2. 블로그 상세 페이지
+3. Tailwind CSS로 스타일링
+4. 샘플 게시물 데이터 포함
+EOF
+cat /tmp/plan.txt
+",
+p038,"node -e ""
+const fs = require('fs');
+const code = \`import sqlite3 from 'sqlite3';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = join(__dirname, '../cashbook.db');
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) console.error('DB connection error:', err);
+  else console.log('Connected to SQLite database');
+});
+
+export function initDb() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(\\\`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      \\\`, (err) => {
+        if (err) console.error('Users table error:', err);
+      });
+
+      db.run(\\\`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT,
+          date DATE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      \\\`, (err) => {
+        if (err) console.error('Transactions table error:', err);
+        else resolve();
+      });
+    });
+  });
+}
+
+export function runAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+export function getAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+export function allAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
+export default db;\`;
+fs.writeFileSync('src/db.js', code);
+console.log('✓ db.js created');
+""
+",
+p039,ls -la <RUN_DIR>/.claude/.cc-writes/,
+p040,"python3 -m http.server 9000 > server.log 2>&1 &
+echo $! > server.pid
+sleep 2
+ps aux | grep http.server | grep -v grep
+",
+p041,"mkdir -p app/blog/{[slug],layout} components lib/blog posts && ls -la",
+p042,"mkdir -p client/src/components && cat > client/src/components/Login.jsx << 'EOF'
+import { useState } from 'react'
+import { login, register } from '../api'
+import './Login.css'
+
+export default function Login({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isLogin) {
+        const response = await login(username, password)
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('username', response.data.user.username)
+        onLogin(response.data.user.username)
+      } else {
+        await register(username, password)
+        const loginResponse = await login(username, password)
+        localStorage.setItem('token', loginResponse.data.token)
+        localStorage.setItem('username', loginResponse.data.user.username)
+        onLogin(loginResponse.data.user.username)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || '오류가 발생했습니다')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className=""login-container"">
+      <div className=""login-card"">
+        <h2>{isLogin ? '로그인' : '회원가입'}</h2>
+        
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <form onSubmit={handleSubmit}>
+          <div className=""form-group"">
+            <label>사용자명</label>
+            <input
+              type=""text""
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder=""사용자명을 입력하세요""
+              required
+            />
+          </div>
+
+          <div className=""form-group"">
+            <label>비밀번호</label>
+            <input
+              type=""password""
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""비밀번호를 입력하세요""
+              required
+            />
+          </div>
+
+          <button 
+            type=""submit"" 
+            className=""submit-btn""
+            disabled={loading}
+          >
+            {loading ? '진행 중...' : isLogin ? '로그인' : '회원가입'}
+          </button>
+        </form>
+
+        <div className=""toggle-mode"">
+          <span>
+            {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            <button 
+              type=""button"" 
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+              }}
+              className=""toggle-btn""
+            >
+              {isLogin ? '회원가입하기' : '로그인하기'}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+EOF
+",
+p043,"cat > <RUN_DIR>/app.js << 'EOF'
+const USERS_KEY = 'users';
+const CURRENT_USER_KEY = 'currentUser';
+
+function getTodosKey(username) {
+  return `todos_${username}`;
+}
+
+function getUsers() {
+  return JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
+}
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function getCurrentUser() {
+  return localStorage.getItem(CURRENT_USER_KEY);
+}
+
+function setCurrentUser(username) {
+  localStorage.setItem(CURRENT_USER_KEY, username || '');
+}
+
+function loadTodos(username) {
+  return JSON.parse(localStorage.getItem(getTodosKey(username)) || '[]');
+}
+
+function saveTodos(username, todos) {
+  localStorage.setItem(getTodosKey(username), JSON.stringify(todos));
+}
+
+function showAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'block';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('signup-form').style.display = 'none';
+}
+
+function showAppScreen(username) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('username-display').textContent = username;
+  render(loadTodos(username));
+}
+
+function render(todos) {
+  const list = document.getElementById('todo-list');
+  list.innerHTML = '';
+  todos.forEach((todo, index) => {
+    const item = document.createElement('li');
+    item.textContent = todo.text;
+    item.className = todo.done ? 'done' : '';
+    item.addEventListener('click', () => {
+      const username = getCurrentUser();
+      const next = todos.map((t, i) => (i === index ? { ...t, done: !t.done } : t));
+      saveTodos(username, next);
+      render(next);
+    });
+    list.appendChild(item);
+  });
+}
+
+function clearError(elementId) {
+  document.getElementById(elementId).textContent = '';
+}
+
+function setError(elementId, message) {
+  document.getElementById(elementId).textContent = message;
+}
+
+// 회원가입
+document.getElementById('signup-btn').addEventListener('click', () => {
+  const username = document.getElementById('signup-username').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const passwordConfirm = document.getElementById('signup-password-confirm').value;
+
+  clearError('signup-error');
+
+  if (!username) {
+    setError('signup-error', '사용자명을 입력해 주세요');
+    return;
+  }
+
+  if (username.length < 2) {
+    setError('signup-error', '사용자명은 2글자 이상이어야 합니다');
+    return;
+  }
+
+  if (!password) {
+    setError('signup-error', '비밀번호를 입력해 주세요');
+    return;
+  }
+
+  if (password.length < 4) {
+    setError('signup-error', '비밀번호는 4글자 이상이어야 합니다');
+    return;
+  }
+
+  if (password !== passwordConfirm) {
+    setError('signup-error', '비밀번호가 일치하지 않습니다');
+    return;
+  }
+
+  const users = getUsers();
+  if (users[username]) {
+    setError('signup-error', '이미 존재하는 사용자명입니다');
+    return;
+  }
+
+  users[username] = { password, createdAt: new Date().toISOString() };
+  saveUsers(users);
+
+  document.getElementById('signup-username').value = '';
+  document.getElementById('signup-password').value = '';
+  document.getElementById('signup-password-confirm').value = '';
+
+  setCurrentUser(username);
+  showAppScreen(username);
+});
+
+// 로그인
+document.getElementById('login-btn').addEventListener('click', () => {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  clearError('login-error');
+
+  if (!username || !password) {
+    setError('login-error', '사용자명과 비밀번호를 입력해 주세요');
+    return;
+  }
+
+  const users = getUsers();
+  const user = users[username];
+
+  if (!user || user.password !== password) {
+    setError('login-error', '사용자명 또는 비밀번호가 올바르지 않습니다');
+    return;
+  }
+
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+
+  setCurrentUser(username);
+  showAppScreen(username);
+});
+
+// 회원가입 화면으로
+document.getElementById('to-signup').addEventListener('click', (e) => {
+  e.preventDefault();
+  clearError('signup-error');
+  clearError('login-error');
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('signup-form').style.display = 'block';
+});
+
+// 로그인 화면으로
+document.getElementById('to-login').addEventListener('click', (e) => {
+  e.preventDefault();
+  clearError('signup-error');
+  clearError('login-error');
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('signup-form').style.display = 'none';
+});
+
+// 로그아웃
+document.getElementById('logout-btn').addEventListener('click', () => {
+  setCurrentUser(null);
+  showAuthScreen();
+});
+
+// 할 일 추가
+document.getElementById('add-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const input = document.getElementById('new-todo');
+  if (input.value.trim() === '') return;
+  const username = getCurrentUser();
+  const todos = loadTodos(username);
+  const next = [...todos, { text: input.value.trim(), done: false }];
+  saveTodos(username, next);
+  render(next);
+  input.value = '';
+});
+
+// 초기화
+if (getCurrentUser()) {
+  showAppScreen(getCurrentUser());
+} else {
+  showAuthScreen();
+}
+EOF
+",
+p044,GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git init,
+p045,"cat > server/package.json << 'EOF'
+{
+  ""name"": ""expense-app-server"",
+  ""version"": ""1.0.0"",
+  ""type"": ""module"",
+  ""main"": ""server.js"",
+  ""scripts"": {
+    ""start"": ""node server.js""
+  },
+  ""dependencies"": {
+    ""express"": ""^4.18.2"",
+    ""sqlite3"": ""^5.1.6"",
+    ""bcryptjs"": ""^2.4.3"",
+    ""jsonwebtoken"": ""^9.0.0"",
+    ""cors"": ""^2.8.5"",
+    ""dotenv"": ""^16.0.3""
+  }
+}
+EOF
+",
+p046,"ls -la client/src/ && [ -d client/src/components ] && echo ""components exists"" || echo ""components does not exist""",
+p047,"python3 -c ""from http.server import HTTPServer, SimpleHTTPRequestHandler; server = HTTPServer(('localhost', 30000), SimpleHTTPRequestHandler); print('Server running on http://localhost:30000'); server.serve_forever()"" > server.log 2>&1 &
+sleep 2
+cat server.log | head -20
+",
+p048,"cd backend && cat > src/db.js << 'EOF'
+import sqlite3 from 'sqlite3';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = join(__dirname, '../cashbook.db');
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) console.error('DB connection error:', err);
+  else console.log('Connected to SQLite database');
+});
+
+export function initDb() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) console.error('Users table error:', err);
+      });
+
+      db.run(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT,
+          date DATE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `, (err) => {
+        if (err) console.error('Transactions table error:', err);
+        else resolve();
+      });
+    });
+  });
+}
+
+export function runAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+export function getAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+export function allAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
+export default db;
+EOF
+",
+p049,"cat > <RUN_DIR>/index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=""UTF-8"">
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+  <title>할 일 목록</title>
+  <link rel=""stylesheet"" href=""styles.css"">
+</head>
+<body>
+  <div class=""container"">
+    <h1>📝 할 일 목록</h1>
+    
+    <div class=""input-area"">
+      <input type=""text"" id=""todoInput"" placeholder=""새로운 할 일을 입력하세요..."">
+      <button id=""addBtn"">추가</button>
+    </div>
+
+    <div id=""todoList"" class=""todo-list""></div>
+  </div>
+
+  <script src=""renderer.js""></script>
+</body>
+</html>
+EOF
+",
+p050,"cat > ./client/src/Login.jsx << 'EOF'
+import { useState } from 'react'
+import { login, register } from './api'
+import './Login.css'
+
+export default function Login({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isLogin) {
+        const response = await login(username, password)
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('username', response.data.user.username)
+        onLogin(response.data.user.username)
+      } else {
+        await register(username, password)
+        const loginResponse = await login(username, password)
+        localStorage.setItem('token', loginResponse.data.token)
+        localStorage.setItem('username', loginResponse.data.user.username)
+        onLogin(loginResponse.data.user.username)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || '오류가 발생했습니다')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className=""login-container"">
+      <div className=""login-card"">
+        <h2>{isLogin ? '로그인' : '회원가입'}</h2>
+        
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <form onSubmit={handleSubmit}>
+          <div className=""form-group"">
+            <label>사용자명</label>
+            <input
+              type=""text""
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder=""사용자명을 입력하세요""
+              required
+            />
+          </div>
+
+          <div className=""form-group"">
+            <label>비밀번호</label>
+            <input
+              type=""password""
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""비밀번호를 입력하세요""
+              required
+            />
+          </div>
+
+          <button 
+            type=""submit"" 
+            className=""submit-btn""
+            disabled={loading}
+          >
+            {loading ? '진행 중...' : isLogin ? '로그인' : '회원가입'}
+          </button>
+        </form>
+
+        <div className=""toggle-mode"">
+          <span>
+            {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            <button 
+              type=""button"" 
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+              }}
+              className=""toggle-btn""
+            >
+              {isLogin ? '회원가입하기' : '로그인하기'}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+EOF
+",
+p051,"cat > README.md << 'EOF'
+# 할 일 목록 앱 📝
+
+간단하고 빠른 할 일 목록 관리 애플리케이션입니다.
+
+## 기능
+
+✅ **할 일 추가/삭제** - 쉽게 할 일을 관리할 수 있습니다
+✅ **완료 표시** - 완료한 할 일을 체크합니다
+✅ **로컬 저장** - 브라우저 로컬 스토리지에 자동 저장됩니다
+✅ **깔끔한 UI** - 사용하기 쉬운 인터페이스
+
+## 사용 방법
+
+### 방법 1: 간단한 웹서버로 실행
+
+```bash
+./run.sh
+```
+
+그 후 브라우저에서 `http://localhost:8000`을 열어주세요.
+
+### 방법 2: 직접 브라우저에서 열기
+
+`index.html` 파일을 직접 브라우저로 열면 됩니다.
+
+### 방법 3: Python으로 실행
+
+```bash
+python3 -m http.server 8000
+```
+
+## 설명
+
+- **추가**: 입력창에 할 일을 입력하고 ""추가"" 버튼을 클릭하거나 Enter 키를 누르면 됩니다
+- **완료 표시**: 할 일 옆의 체크박스를 클릭하면 완료 표시가 됩니다
+- **삭제**: 할 일 오른쪽의 ""✕"" 버튼을 클릭하면 삭제됩니다
+- **저장**: 모든 할 일은 브라우저 로컬 스토리지에 자동으로 저장됩니다
+
+## 기술 스택
+
+- HTML5
+- CSS3
+- Vanilla JavaScript
+- 브라우저 LocalStorage API
+
+## 라이선스
+
+MIT
+EOF
+",
+p052,find downloads -type f | sort,
+p053,"cat .claude/plan.md 2>/dev/null || echo ""No plan file""",
+p054,"cat > <RUN_DIR>/backend/package.json << 'EOF'
+{
+  ""name"": ""cashbook-backend"",
+  ""version"": ""1.0.0"",
+  ""main"": ""src/server.js"",
+  ""type"": ""module"",
+  ""scripts"": {
+    ""start"": ""node src/server.js"",
+    ""dev"": ""node --watch src/server.js""
+  },
+  ""dependencies"": {
+    ""express"": ""^4.18.2"",
+    ""sqlite3"": ""^5.1.6"",
+    ""bcryptjs"": ""^2.4.3"",
+    ""jsonwebtoken"": ""^9.0.0"",
+    ""cors"": ""^2.8.5"",
+    ""dotenv"": ""^16.0.3""
+  }
+}
+EOF
+",
+p055,"cat > run.sh << 'EOF'
+#!/bin/bash
+echo ""할 일 목록 앱을 시작합니다...""
+echo ""브라우저에서 http://localhost:8000 을 열어주세요""
+python3 -m http.server 8000
+EOF
+chmod +x run.sh
+",
+p056,npm install 2>&1 | tail -30,
+p057,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+
+downloads_dir = Path(""downloads"")
+
+# 파일들을 확장자별로 그룹화
+files_by_extension = {}
+
+for file_path in downloads_dir.iterdir():
+    if file_path.is_file():
+        # 확장자 추출
+        if file_path.suffix:
+            ext = file_path.suffix[1:].lower()
+        else:
+            ext = ""기타""
+        
+        if ext not in files_by_extension:
+            files_by_extension[ext] = []
+        files_by_extension[ext].append(file_path)
+
+# 확장자별 폴더 생성 및 파일 이동
+for ext, files in sorted(files_by_extension.items()):
+    folder_name = downloads_dir / ext
+    folder_name.mkdir(exist_ok=True)
+    
+    for file_path in files:
+        dest_path = folder_name / file_path.name
+        shutil.move(str(file_path), str(dest_path))
+        print(f""✓ {file_path.name} → {ext}/ 폴더로 이동"")
+
+print(f""\n✅ 완료! {len(files_by_extension)}개 확장자 그룹으로 정렬되었습니다."")
+print(""\n📁 정렬 결과:"")
+for ext in sorted(files_by_extension.keys()):
+    folder_path = downloads_dir / ext
+    file_count = len(list(folder_path.glob(""*"")))
+    print(f""   {ext}/ ({file_count}개 파일)"")
+EOF
+",
+p058,ls -la,
+p059,"cat > src/App.js << 'EOF'
+import React, { useState, useEffect } from 'react';
+import './App.css';
+
+function App() {
+  const [todos, setTodos] = useState([]);
+  const [input, setInput] = useState('');
+
+  useEffect(() => {
+    loadTodos();
+  }, []);
+
+  useEffect(() => {
+    saveTodos(todos);
+  }, [todos]);
+
+  const loadTodos = async () => {
+    try {
+      const data = await window.electron.getTodos();
+      setTodos(data || []);
+    } catch (err) {
+      console.error('할 일 로드 실패:', err);
+    }
+  };
+
+  const saveTodos = async (data) => {
+    try {
+      await window.electron.saveTodos(data);
+    } catch (err) {
+      console.error('할 일 저장 실패:', err);
+    }
+  };
+
+  const addTodo = () => {
+    if (input.trim()) {
+      const newTodo = {
+        id: Date.now(),
+        text: input.trim(),
+        completed: false,
+        createdAt: new Date().toLocaleString('ko-KR')
+      };
+      setTodos([newTodo, ...todos]);
+      setInput('');
+    }
+  };
+
+  const deleteTodo = (id) => {
+    setTodos(todos.filter(todo => todo.id !== id));
+  };
+
+  const toggleTodo = (id) => {
+    setTodos(todos.map(todo =>
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    ));
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      addTodo();
+    }
+  };
+
+  const completedCount = todos.filter(t => t.completed).length;
+
+  return (
+    <div className=""app"">
+      <div className=""container"">
+        <div className=""header"">
+          <h1>📝 할 일 목록</h1>
+          <div className=""stats"">
+            {todos.length > 0 && (
+              <span className=""stat-text"">
+                {completedCount}/{todos.length} 완료
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className=""input-group"">
+          <input
+            type=""text""
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder=""새로운 할 일을 입력하세요...""
+            className=""input""
+          />
+          <button onClick={addTodo} className=""btn-add"">
+            추가
+          </button>
+        </div>
+
+        <div className=""todo-list"">
+          {todos.length === 0 ? (
+            <div className=""empty-state"">
+              <p>할 일이 없습니다</p>
+              <p className=""empty-hint"">위에서 새로운 할 일을 추가해보세요!</p>
+            </div>
+          ) : (
+            todos.map(todo => (
+              <div
+                key={todo.id}
+                className={`todo-item ${todo.completed ? 'completed' : ''}`}
+              >
+                <input
+                  type=""checkbox""
+                  checked={todo.completed}
+                  onChange={() => toggleTodo(todo.id)}
+                  className=""checkbox""
+                />
+                <div className=""todo-content"">
+                  <span className=""todo-text"">{todo.text}</span>
+                  <span className=""todo-date"">{todo.createdAt}</span>
+                </div>
+                <button
+                  onClick={() => deleteTodo(todo.id)}
+                  className=""btn-delete""
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+EOF
+",
+p060,"cat > client/src/index.css << 'EOF'
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+button.primary {
+  background-color: #4CAF50;
+  color: white;
+}
+
+button.primary:hover {
+  background-color: #45a049;
+}
+
+button.danger {
+  background-color: #f44336;
+  color: white;
+}
+
+button.danger:hover {
+  background-color: #da190b;
+}
+
+input, select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+EOF
+",
+p061,"pwd && cat > main.js << 'EOF'
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const fs = require('fs');
+
+let mainWindow;
+
+const createWindow = () => {
+  mainWindow = new BrowserWindow({
+    width: 600,
+    height: 800,
+    minWidth: 400,
+    minHeight: 500,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  const startUrl = 'http://localhost:3000';
+  mainWindow.loadURL(startUrl);
+  mainWindow.webContents.openDevTools();
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+};
+
+app.on('ready', createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
+
+const todosFile = path.join(__dirname, 'todos.json');
+
+ipcMain.handle('get-todos', () => {
+  try {
+    if (fs.existsSync(todosFile)) {
+      const data = fs.readFileSync(todosFile, 'utf-8');
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (err) {
+    console.error('할 일 읽기 오류:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('save-todos', (event, todos) => {
+  try {
+    fs.writeFileSync(todosFile, JSON.stringify(todos, null, 2));
+    return true;
+  } catch (err) {
+    console.error('할 일 저장 오류:', err);
+    return false;
+  }
+});
+EOF
+",
+p062,git init,
+p063,"cat > bot.py << 'EOF'
+import discord
+from discord.ext import commands
+import aiohttp
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+\<EMAIL>
+async def on_ready():
+    print(f'{bot.user} has connected to Discord!')
+    try:
+        synced = await bot.tree.sync()
+        print(f""Synced {len(synced)} command(s)"")
+    except Exception as e:
+        print(e)
+\<EMAIL>(name=""서울날씨"", description=""서울의 현재 날씨를 알려줍니다"")
+async def seoul_weather(interaction: discord.Interaction):
+    """"""서울의 날씨 정보를 조회합니다""""""
+    
+    if not OPENWEATHER_API_KEY:
+        await interaction.response.send_message(""❌ API 키가 설정되지 않았습니다."")
+        return
+    
+    await interaction.response.defer()
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f""https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid={OPENWEATHER_API_KEY}&units=metric&lang=ko""
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    temp = data['main']['temp']
+                    feels_like = data['main']['feels_like']
+                    humidity = data['main']['humidity']
+                    pressure = data['main']['pressure']
+                    wind_speed = data['wind']['speed']
+                    description = data['weather'][0]['description']
+                    
+                    weather_type = data['weather'][0]['main']
+                    emoji_map = {
+                        'Clear': '☀️',
+                        'Clouds': '☁️',
+                        'Rain': '🌧️',
+                        'Drizzle': '🌦️',
+                        'Thunderstorm': '⛈️',
+                        'Snow': '❄️',
+                        'Mist': '🌫️',
+                    }
+                    emoji = emoji_map.get(weather_type, '🌤️')
+                    
+                    embed = discord.Embed(
+                        title=f""{emoji} 서울의 날씨"",
+                        color=discord.Color.blue()
+                    )
+                    embed.add_field(name=""🌡️ 현재 온도"", value=f""{temp}°C"", inline=True)
+                    embed.add_field(name=""🤔 체감 온도"", value=f""{feels_like}°C"", inline=True)
+                    embed.add_field(name=""💧 습도"", value=f""{humidity}%"", inline=True)
+                    embed.add_field(name=""🌪️ 바람 속도"", value=f""{wind_speed} m/s"", inline=True)
+                    embed.add_field(name=""📊 기압"", value=f""{pressure} hPa"", inline=True)
+                    embed.add_field(name=""☁️ 날씨"", value=description.capitalize(), inline=True)
+                    embed.set_footer(text=""OpenWeatherMap API"")
+                    
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send(""❌ 날씨 정보를 가져오지 못했습니다."")
+    except Exception as e:
+        print(f""Error: {e}"")
+        await interaction.followup.send(f""❌ 오류가 발생했습니다: {str(e)}"")
+\<EMAIL>(name=""서울_상세날씨"", description=""서울의 상세한 날씨 정보를 알려줍니다"")
+async def seoul_detailed_weather(interaction: discord.Interaction):
+    """"""서울의 상세 날씨 정보를 조회합니다""""""
+    
+    if not OPENWEATHER_API_KEY:
+        await interaction.response.send_message(""❌ API 키가 설정되지 않았습니다."")
+        return
+    
+    await interaction.response.defer()
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f""https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid={OPENWEATHER_API_KEY}&units=metric&lang=ko""
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    temp = data['main']['temp']
+                    temp_min = data['main']['temp_min']
+                    temp_max = data['main']['temp_max']
+                    feels_like = data['main']['feels_like']
+                    humidity = data['main']['humidity']
+                    pressure = data['main']['pressure']
+                    wind_speed = data['wind']['speed']
+                    wind_deg = data['wind'].get('deg', 'N/A')
+                    clouds = data['clouds']['all']
+                    visibility = data.get('visibility', 'N/A') / 1000 if data.get('visibility') else 'N/A'
+                    description = data['weather'][0]['description']
+                    
+                    embed = discord.Embed(
+                        title=""📍 서울의 상세 날씨"",
+                        color=discord.Color.green()
+                    )
+                    embed.add_field(name=""🌡️ 현재 온도"", value=f""{temp}°C"", inline=True)
+                    embed.add_field(name=""📈 최고/최저"", value=f""{temp_max}°C / {temp_min}°C"", inline=True)
+                    embed.add_field(name=""🤔 체감 온도"", value=f""{feels_like}°C"", inline=True)
+                    embed.add_field(name=""💧 습도"", value=f""{humidity}%"", inline=True)
+                    embed.add_field(name=""🌪️ 바람 속도"", value=f""{wind_speed} m/s"", inline=True)
+                    embed.add_field(name=""🧭 풍향"", value=f""{wind_deg}°"", inline=True)
+                    embed.add_field(name=""☁️ 구름"", value=f""{clouds}%"", inline=True)
+                    embed.add_field(name=""👁️ 시정"", value=f""{visibility} km"" if isinstance(visibility, float) else visibility, inline=True)
+                    embed.add_field(name=""📊 기압"", value=f""{pressure} hPa"", inline=True)
+                    embed.add_field(name=""상태"", value=description.capitalize(), inline=False)
+                    embed.set_footer(text=""OpenWeatherMap API"")
+                    
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send(""❌ 날씨 정보를 가져오지 못했습니다."")
+    except Exception as e:
+        print(f""Error: {e}"")
+        await interaction.followup.send(f""❌ 오류가 발생했습니다: {str(e)}"")
+
+if __name__ == ""__main__"":
+    if DISCORD_TOKEN:
+        bot.run(DISCORD_TOKEN)
+    else:
+        print(""❌ DISCORD_TOKEN이 설정되지 않았습니다. .env 파일을 확인하세요."")
+EOF
+",
+p064,python3 organize_files.py,
+p065,"cat > .gitignore << 'EOF'
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+EOF
+
+cat > README.md << 'EOF'
+# Next.js Blog
+
+A beautiful, fast, and simple blog built with Next.js, React, TypeScript, and Tailwind CSS.
+
+## Features
+
+- ✨ Markdown support for blog posts
+- 📄 Static site generation with dynamic routing
+- 🎨 Clean and responsive design with Tailwind CSS
+- 🏷️ Category support for organizing posts
+- ⚡ Fast loading with automatic optimization
+- 📱 Fully responsive design
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Installation
+
+```bash
+npm install
+```
+
+### Development
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+### Building for Production
+
+```bash
+npm run build
+npm run start
+```
+
+## Project Structure
+
+```
+.
+├── app/                    # Next.js App Router directory
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Home page (blog listing)
+│   ├── globals.css        # Global styles
+│   └── blog/
+│       ├── layout.tsx     # Blog layout
+│       └── [slug]/
+│           └── page.tsx   # Dynamic blog post page
+├── components/            # Reusable React components
+│   ├── Header.tsx
+│   ├── Footer.tsx
+│   └── PostCard.tsx
+├── lib/
+│   └── blog/
+│       └── get-posts.ts   # Utility functions for fetching posts
+├── posts/                 # Markdown blog posts
+│   ├── hello-world.md
+│   ├── getting-started-with-nextjs.md
+│   └── markdown-support.md
+├── public/                # Static assets
+├── package.json
+├── tailwind.config.ts     # Tailwind CSS configuration
+├── tsconfig.json          # TypeScript configuration
+└── next.config.ts         # Next.js configuration
+```
+
+## Adding New Posts
+
+1. Create a new `.md` file in the `posts/` directory
+2. Add frontmatter with metadata at the top of the file:
+
+```markdown
+---
+title: Your Post Title
+date: 2024-10-08
+excerpt: A brief description of your post
+category: Tutorial
+---
+
+# Your Post Title
+
+Your content here...
+```
+
+3. The blog will automatically pick up the new post and display it on the home page
+
+## Customization
+
+### Styling
+
+Edit `tailwind.config.ts` to customize colors, fonts, and other design elements.
+
+### Components
+
+Modify components in the `components/` directory to change the look and feel of the blog.
+
+### Metadata
+
+Update the blog title and description in `app/layout.tsx`:
+
+```tsx
+export const metadata: Metadata = {
+  title: ""Your Blog Title"",
+  description: ""Your blog description"",
+};
+```
+
+## Technologies Used
+
+- [Next.js](https://nextjs.org/) - React framework for production
+- [React](https://react.dev/) - JavaScript library for building user interfaces
+- [TypeScript](https://www.typescriptlang.org/) - Typed superset of JavaScript
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
+- [Marked](https://marked.js.org/) - Markdown parser
+- [Gray Matter](https://github.com/jonschlinkert/gray-matter) - Front-matter parser
+
+## License
+
+ISC
+EOF
+
+cat README.md",
+p066,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+
+downloads_dir = Path(""downloads"")
+
+if not downloads_dir.exists():
+    print(""❌ downloads 폴더를 찾을 수 없습니다."")
+else:
+    # 파일들을 확장자별로 그룹화
+    files_by_extension = {}
+    
+    for file_path in downloads_dir.iterdir():
+        if file_path.is_file():
+            # 확장자 추출
+            if file_path.suffix:
+                ext = file_path.suffix[1:].lower()  # .csv -> csv
+            else:
+                ext = ""기타""  # 확장자 없는 파일
+            
+            if ext not in files_by_extension:
+                files_by_extension[ext] = []
+            files_by_extension[ext].append(file_path)
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    for ext, files in sorted(files_by_extension.items()):
+        folder_name = downloads_dir / ext
+        folder_name.mkdir(exist_ok=True)
+        
+        for file_path in files:
+            dest_path = folder_name / file_path.name
+            shutil.move(str(file_path), str(dest_path))
+            print(f""✓ {file_path.name} → {ext}/ 폴더로 이동"")
+    
+    print(f""\n✅ 완료! {len(files_by_extension)}개 확장자 그룹으로 정렬되었습니다."")
+    print(""\n📁 정렬 결과:"")
+    for ext in sorted(files_by_extension.keys()):
+        folder_path = downloads_dir / ext
+        file_count = len(list(folder_path.glob(""*"")))
+        print(f""   {ext}/ ({file_count}개 파일)"")
+EOF
+",
+p067,ls -la downloads/,
+p068,"cat > client/src/App.css << 'EOF'
+.app {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 18px;
+  color: white;
+}
+
+.header {
+  background-color: rgba(0, 0, 0, 0.2);
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
+}
+
+.logout-btn {
+  background-color: #ff6b6b;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+.logout-btn:hover {
+  background-color: #ee5a52;
+}
+EOF
+",
+p069,ls -la <RUN_DIR>/ | grep -E '\.(js|html|css|json)$',
+p070,"cat > app/globals.css << 'EOF'
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+code {
+  background-color: #f1f5f9;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: 'Courier New', monospace;
+}
+
+pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+}
+EOF
+",
+p071,find .claude -type f 2>/dev/null | head -20,
+p072,"cat > src/App.css << 'EOF'
+.app {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.container {
+  max-width: 500px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 25px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 28px;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.stats {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.stat-text {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  background: #f9f9f9;
+}
+
+.input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.btn-add {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-add:active {
+  transform: translateY(0);
+}
+
+.todo-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #999;
+  text-align: center;
+}
+
+.empty-state p {
+  margin: 5px 0;
+}
+
+.empty-hint {
+  font-size: 12px;
+  color: #bbb;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+  transition: background-color 0.2s;
+}
+
+.todo-item:hover {
+  background-color: #f9f9f9;
+}
+
+.todo-item.completed .todo-text {
+  color: #999;
+  text-decoration: line-through;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: #667eea;
+}
+
+.todo-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.todo-text {
+  word-break: break-word;
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.todo-date {
+  font-size: 12px;
+  color: #999;
+}
+
+.btn-delete {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.btn-delete:hover {
+  background: #ff5252;
+  transform: scale(1.1);
+}
+
+.btn-delete:active {
+  transform: scale(0.95);
+}
+EOF
+",
+p073,"mkdir -p ""app/blog/[slug]"" app/blog/layout app/components app/lib/blog posts && ls -la",
+p074,"cat > cafe_menu.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>아로마 카페 - 메뉴</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c4 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #8b6f47 0%, #a0826d 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px 20px;
+        }
+
+        .menu-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #8b6f47;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #d4a574;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-item {
+            background: #f9f7f4;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #d4a574;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(139, 111, 71, 0.15);
+        }
+
+        .menu-item-name {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .menu-item-description {
+            font-size: 0.95em;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .menu-item-price {
+            font-size: 1.4em;
+            color: #8b6f47;
+            font-weight: 700;
+        }
+
+        .footer {
+            background: #f5e6d3;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>☕ 아로마 카페</h1>
+            <p>신선한 커피와 맛있는 간식이 있는 공간</p>
+        </div>
+
+        <div class=""content"">
+            <!-- 음료 섹션 -->
+            <div class=""menu-section"">
+                <h2 class=""section-title"">☕ 커피</h2>
+                <div class=""menu-grid"">
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">에스프레소</div>
+                        <div class=""menu-item-description"">진하고 풍부한 맛의 기본 커피</div>
+                        <div class=""menu-item-price"">3,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">아메리카노</div>
+                        <div class=""menu-item-description"">에스프레소에 물을 더한 부드러운 맛</div>
+                        <div class=""menu-item-price"">4,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">카페라떼</div>
+                        <div class=""menu-item-description"">에스프레소와 따뜻한 우유의 조화</div>
+                        <div class=""menu-item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">카푸치노</div>
+                        <div class=""menu-item-description"">진한 에스프레소와 거품 우유</div>
+                        <div class=""menu-item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">카페모카</div>
+                        <div class=""menu-item-description"">초콜릿과 커피의 완벽한 조화</div>
+                        <div class=""menu-item-price"">5,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">바닐라 라떼</div>
+                        <div class=""menu-item-description"">부드러운 바닐라 향의 라떼</div>
+                        <div class=""menu-item-price"">5,000원</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 차 섹션 -->
+            <div class=""menu-section"">
+                <h2 class=""section-title"">🍵 음료</h2>
+                <div class=""menu-grid"">
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">아이스 아메리카노</div>
+                        <div class=""menu-item-description"">시원한 아메리카노</div>
+                        <div class=""menu-item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">딸기 스무디</div>
+                        <div class=""menu-item-description"">신선한 딸기의 맛</div>
+                        <div class=""menu-item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">초콜릿 핫초콜릿</div>
+                        <div class=""menu-item-description"">따뜻한 초콜릿 음료</div>
+                        <div class=""menu-item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">유자차</div>
+                        <div class=""menu-item-description"">상큼한 유자의 맛</div>
+                        <div class=""menu-item-price"">4,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">허브차</div>
+                        <div class=""menu-item-description"">몸에 좋은 다양한 허브차</div>
+                        <div class=""menu-item-price"">3,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">초코칩 프라페</div>
+                        <div class=""menu-item-description"">달콤한 초콜릿의 시원한 음료</div>
+                        <div class=""menu-item-price"">5,500원</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 음식 섹션 -->
+            <div class=""menu-section"">
+                <h2 class=""section-title"">🥐 음식</h2>
+                <div class=""menu-grid"">
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">크로아상</div>
+                        <div class=""menu-item-description"">버터향이 풍부한 프랑스식 페이스트리</div>
+                        <div class=""menu-item-price"">3,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">초콜릿 마들렌</div>
+                        <div class=""menu-item-description"">부드러운 초콜릿 마들렌 케이크</div>
+                        <div class=""menu-item-price"">4,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">딸기 쇼트케이크</div>
+                        <div class=""menu-item-description"">신선한 딸기와 크림</div>
+                        <div class=""menu-item-price"">5,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">계란 샌드위치</div>
+                        <div class=""menu-item-description"">신선한 계란과 채소</div>
+                        <div class=""menu-item-price"">6,000원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">블루베리 머핀</div>
+                        <div class=""menu-item-description"">풍부한 블루베리의 맛</div>
+                        <div class=""menu-item-price"">4,500원</div>
+                    </div>
+                    <div class=""menu-item"">
+                        <div class=""menu-item-name"">시나몬 롤</div>
+                        <div class=""menu-item-description"">따뜻한 시나몬 향의 롤케이크</div>
+                        <div class=""menu-item-price"">5,000원</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class=""footer"">
+            <p>📍 영업시간 : 평일 07:00 - 22:00 | 주말 08:00 - 23:00</p>
+            <p>📞 전화 : 02-XXXX-XXXX | 💬 카카오톡 ID: aroma_cafe</p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+",
+p075,"cat > .gitignore << 'EOF'
+node_modules/
+build/
+dist/
+*.log
+.DS_Store
+todos.json
+EOF
+",
+p076,"cat > tetris.html << 'EOF'
+<!DOCTYPE html>
+<html lang=""ko"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>테트리스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+        
+        .container {
+            display: flex;
+            gap: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-board {
+            position: relative;
+            width: 200px;
+            height: 400px;
+            background: #000;
+            border: 3px solid #fff;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            gap: 0;
+        }
+        
+        .cell {
+            border: 1px solid #333;
+            background: #000;
+        }
+        
+        .cell.filled {
+            background: #0f0;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .cell.cyan { background: #00ffff; }
+        .cell.blue { background: #0000ff; }
+        .cell.orange { background: #ff8800; }
+        .cell.yellow { background: #ffff00; }
+        .cell.green { background: #00ff00; }
+        .cell.purple { background: #ff00ff; }
+        .cell.red { background: #ff0000; }
+        
+        .info {
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 150px;
+        }
+        
+        .info h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .info-box h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: #64f;
+        }
+        
+        .info-box p {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+            line-height: 1.8;
+        }
+        
+        .controls h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: #64f;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            transition: opacity 0.3s;
+        }
+        
+        button:hover {
+            opacity: 0.8;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 2px solid #f00;
+        }
+        
+        .game-over.show {
+            display: block;
+        }
+        
+        .game-over h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .game-over p {
+            font-size: 18px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""game-board"" id=""gameBoard""></div>
+        
+        <div class=""info"">
+            <h1>테트리스</h1>
+            
+            <div class=""info-box"">
+                <h2>점수</h2>
+                <p id=""score"">0</p>
+            </div>
+            
+            <div class=""info-box"">
+                <h2>레벨</h2>
+                <p id=""level"">1</p>
+            </div>
+            
+            <div class=""info-box"">
+                <h2>라인</h2>
+                <p id=""lines"">0</p>
+            </div>
+            
+            <button id=""startBtn"" onclick=""toggleGame()"">게임 시작</button>
+            
+            <div class=""controls"">
+                <h2>조작</h2>
+                <div>← → : 이동</div>
+                <div>↑ : 회전</div>
+                <div>↓ : 빠른 낙하</div>
+                <div>스페이스 : 즉시 낙하</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class=""game-over"" id=""gameOverScreen"">
+        <h2>게임 오버</h2>
+        <p id=""finalScore"">최종 점수: 0</p>
+    </div>
+
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        
+        const TETROMINOS = [
+            { shape: [[1,1,1,1]], color: 'cyan' },
+            { shape: [[1,1],[1,1]], color: 'yellow' },
+            { shape: [[0,1,0],[1,1,1]], color: 'purple' },
+            { shape: [[1,0,0],[1,1,1]], color: 'blue' },
+            { shape: [[0,0,1],[1,1,1]], color: 'orange' },
+            { shape: [[0,1,1],[1,1,0]], color: 'green' },
+            { shape: [[1,1,0],[0,1,1]], color: 'red' }
+        ];
+        
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+        let currentPiece = null;
+        let currentX = 0;
+        let currentY = 0;
+        let gameRunning = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropInterval = 800;
+        let lastDropTime = 0;
+        
+        const gameBoard = document.getElementById('gameBoard');
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const linesDisplay = document.getElementById('lines');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const startBtn = document.getElementById('startBtn');
+        
+        function createCells() {
+            gameBoard.innerHTML = '';
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
+        
+        function getRandomPiece() {
+            return JSON.parse(JSON.stringify(TETROMINOS[Math.floor(Math.random() * TETROMINOS.length)]));
+        }
+        
+        function rotatePiece(piece) {
+            const n = piece.shape.length;
+            const rotated = Array(piece.shape[0].length).fill(null).map(() => Array(n).fill(0));
+            for (let y = 0; y < n; y++) {
+                for (let x = 0; x < piece.shape[0].length; x++) {
+                    rotated[x][n - 1 - y] = piece.shape[y][x];
+                }
+            }
+            return { shape: rotated, color: piece.color };
+        }
+        
+        function isValidPosition(piece, x, y) {
+            for (let py = 0; py < piece.shape.length; py++) {
+                for (let px = 0; px < piece.shape[py].length; px++) {
+                    if (piece.shape[py][px]) {
+                        const nx = x + px;
+                        const ny = y + py;
+                        if (nx < 0 || nx >= COLS || ny >= ROWS) return false;
+                        if (ny >= 0 && board[ny][nx]) return false;
+                    }
+                }
+            }
+            return true;
+        }
+        
+        function placePiece() {
+            for (let py = 0; py < currentPiece.shape.length; py++) {
+                for (let px = 0; px < currentPiece.shape[py].length; px++) {
+                    if (currentPiece.shape[py][px]) {
+                        const x = currentX + px;
+                        const y = currentY + py;
+                        if (y >= 0) board[y][x] = currentPiece.color;
+                    }
+                }
+            }
+        }
+        
+        function clearLines() {
+            let clearedLines = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    clearedLines++;
+                    y++;
+                }
+            }
+            
+            if (clearedLines > 0) {
+                score += clearedLines * clearedLines * 100;
+                lines += clearedLines;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(200, 800 - (level - 1) * 50);
+            }
+        }
+        
+        function spawnPiece() {
+            currentPiece = getRandomPiece();
+            currentX = Math.floor(COLS / 2) - 1;
+            currentY = 0;
+            
+            if (!isValidPosition(currentPiece, currentX, currentY)) {
+                endGame();
+            }
+        }
+        
+        function updateDisplay() {
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const cell = document.getElementById(`cell-${x}-${y}`);
+                    cell.className = 'cell';
+                    if (board[y][x]) {
+                        cell.classList.add(board[y][x], 'filled');
+                    }
+                }
+            }
+            
+            if (currentPiece) {
+                for (let py = 0; py < currentPiece.shape.length; py++) {
+                    for (let px = 0; px < currentPiece.shape[py].length; px++) {
+                        if (currentPiece.shape[py][px]) {
+                            const x = currentX + px;
+                            const y = currentY + py;
+                            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                                const cell = document.getElementById(`cell-${x}-${y}`);
+                                cell.className = `cell ${currentPiece.color} filled`;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            scoreDisplay.textContent = score;
+            levelDisplay.textContent = level;
+            linesDisplay.textContent = lines;
+        }
+        
+        function moveDown() {
+            if (isValidPosition(currentPiece, currentX, currentY + 1)) {
+                currentY++;
+            } else {
+                placePiece();
+                clearLines();
+                spawnPiece();
+            }
+        }
+        
+        function endGame() {
+            gameRunning = false;
+            gameOverScreen.classList.add('show');
+            finalScoreDisplay.textContent = `최종 점수: ${score}`;
+            startBtn.textContent = '다시 시작';
+        }
+        
+        function toggleGame() {
+            if (gameRunning) {
+                gameRunning = false;
+                startBtn.textContent = '게임 재개';
+            } else {
+                if (score === 0) {
+                    board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+                    score = 0;
+                    lines = 0;
+                    level = 1;
+                    dropInterval = 800;
+                }
+                gameRunning = true;
+                gameOverScreen.classList.remove('show');
+                startBtn.textContent = '게임 일시정지';
+                spawnPiece();
+                lastDropTime = Date.now();
+                gameLoop();
+            }
+        }
+        
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            const now = Date.now();
+            if (now - lastDropTime > dropInterval) {
+                moveDown();
+                lastDropTime = now;
+            }
+            
+            updateDisplay();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (isValidPosition(currentPiece, currentX - 1, currentY)) currentX--;
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    if (isValidPosition(currentPiece, currentX + 1, currentY)) currentX++;
+                    e.preventDefault();
+                    break;
+                case 'ArrowUp':
+                    const rotated = rotatePiece(currentPiece);
+                    if (isValidPosition(rotated, currentX, currentY)) currentPiece = rotated;
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    e.preventDefault();
+                    break;
+                case ' ':
+                    while (isValidPosition(currentPiece, currentX, currentY + 1)) currentY++;
+                    e.preventDefault();
+                    break;
+            }
+            updateDisplay();
+        });
+        
+        createCells();
+        updateDisplay();
+    </script>
+</body>
+</html>
+EOF
+",
+p077,"cat > server/server.js << 'EOF'
+import express from 'express';
+import cors from 'cors';
+import { initDB, getDB } from './db.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+const app = express();
+const PORT = 5000;
+const JWT_SECRET = 'your-secret-key-change-in-production';
+
+app.use(cors());
+app.use(express.json());
+
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'No token' });
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
+    next();
+  } catch {
+    res.status(403).json({ message: 'Invalid token' });
+  }
+};
+
+app.post('/api/auth/register', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ message: 'Missing fields' });
+  
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const db = getDB();
+  
+  db.run(
+    'INSERT INTO users (username, password) VALUES (?, ?)',
+    [username, hashedPassword],
+    function(err) {
+      if (err) return res.status(400).json({ message: 'Username already exists' });
+      res.json({ id: this.lastID, username });
+    }
+  );
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ message: 'Missing fields' });
+  
+  const db = getDB();
+  db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
+    if (err || !user) return res.status(401).json({ message: 'Invalid credentials' });
+    
+    if (!bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { id: user.id, username: user.username } });
+  });
+});
+
+app.post('/api/expenses', verifyToken, (req, res) => {
+  const { type, category, amount, description, date } = req.body;
+  const db = getDB();
+  
+  db.run(
+    'INSERT INTO expenses (userId, type, category, amount, description, date) VALUES (?, ?, ?, ?, ?, ?)',
+    [req.userId, type, category, amount, description, date],
+    function(err) {
+      if (err) return res.status(500).json({ message: 'Error creating expense' });
+      res.json({ id: this.lastID, userId: req.userId, type, category, amount, description, date });
+    }
+  );
+});
+
+app.get('/api/expenses', verifyToken, (req, res) => {
+  const db = getDB();
+  db.all(
+    'SELECT * FROM expenses WHERE userId = ? ORDER BY date DESC',
+    [req.userId],
+    (err, expenses) => {
+      if (err) return res.status(500).json({ message: 'Error fetching expenses' });
+      res.json(expenses);
+    }
+  );
+});
+
+app.delete('/api/expenses/:id', verifyToken, (req, res) => {
+  const db = getDB();
+  db.run(
+    'DELETE FROM expenses WHERE id = ? AND userId = ?',
+    [req.params.id, req.userId],
+    function(err) {
+      if (err) return res.status(500).json({ message: 'Error deleting expense' });
+      res.json({ message: 'Expense deleted' });
+    }
+  );
+});
+
+async function startServer() {
+  try {
+    await initDB();
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
+EOF
+",
+p078,tree downloads/ -L 2,
+p079,"cat > ./client/src/components/Login.jsx << 'EOF'
+import { useState } from 'react'
+import { login, register } from '../api'
+import './Login.css'
+
+export default function Login({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isLogin) {
+        const response = await login(username, password)
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('username', response.data.user.username)
+        onLogin(response.data.user.username)
+      } else {
+        await register(username, password)
+        const loginResponse = await login(username, password)
+        localStorage.setItem('token', loginResponse.data.token)
+        localStorage.setItem('username', loginResponse.data.user.username)
+        onLogin(loginResponse.data.user.username)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || '오류가 발생했습니다')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className=""login-container"">
+      <div className=""login-card"">
+        <h2>{isLogin ? '로그인' : '회원가입'}</h2>
+        
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <form onSubmit={handleSubmit}>
+          <div className=""form-group"">
+            <label>사용자명</label>
+            <input
+              type=""text""
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder=""사용자명을 입력하세요""
+              required
+            />
+          </div>
+
+          <div className=""form-group"">
+            <label>비밀번호</label>
+            <input
+              type=""password""
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""비밀번호를 입력하세요""
+              required
+            />
+          </div>
+
+          <button 
+            type=""submit"" 
+            className=""submit-btn""
+            disabled={loading}
+          >
+            {loading ? '진행 중...' : isLogin ? '로그인' : '회원가입'}
+          </button>
+        </form>
+
+        <div className=""toggle-mode"">
+          <span>
+            {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            <button 
+              type=""button"" 
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+              }}
+              className=""toggle-btn""
+            >
+              {isLogin ? '회원가입하기' : '로그인하기'}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+EOF
+",
+p080,"ls -la client/src/components/ 2>/dev/null || echo ""폴더 없음""",
+p081,cat package.json,
+p082,"printf ""test"" > client/src/components/test.txt && cat client/src/components/test.txt",
+p083,"cat > next.config.ts << 'EOF'
+import type { NextConfig } from ""next"";
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+};
+
+export default nextConfig;
+EOF
+
+cat > tailwind.config.ts << 'EOF'
+import type { Config } from ""tailwindcss"";
+
+const config: Config = {
+  content: [
+    ""./app/**/*.{js,ts,jsx,tsx,mdx}"",
+    ""./components/**/*.{js,ts,jsx,tsx,mdx}"",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+export default config;
+EOF
+
+cat > postcss.config.mjs << 'EOF'
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+EOF
+",
+p084,"cat > posts/hello-world.md << 'EOF'
+---
+title: Hello World
+date: 2024-10-08
+excerpt: Welcome to my new blog! This is the first post.
+category: Welcome
+---
+
+# Hello World
+
+Welcome to my new blog! I'm excited to share my thoughts and ideas with you.
+
+## What to expect
+
+This blog will cover topics related to:
+- Web development
+- Next.js
+- React
+- TypeScript
+
+## Let's get started
+
+I hope you enjoy reading my posts. Feel free to come back often for new content!
+EOF
+
+cat > posts/getting-started-with-nextjs.md << 'EOF'
+---
+title: Getting Started with Next.js
+date: 2024-10-07
+excerpt: Learn the basics of Next.js and how to build amazing web applications.
+category: Tutorial
+---
+
+# Getting Started with Next.js
+
+Next.js is a powerful framework built on top of React that makes it easy to build fast, scalable web applications.
+
+## Key Features
+
+- **File-based Routing**: Automatic routing based on your file structure
+- **API Routes**: Build serverless APIs
+- **Image Optimization**: Automatic image optimization
+- **Code Splitting**: Automatic code splitting for better performance
+
+## Getting Started
+
+```
+npx create-next-app@latest my-app
+cd my-app
+npm run dev
+```
+
+Visit `http://localhost:3000` to see your app running!
+
+## Next Steps
+
+Now that you have Next.js installed, you can:
+1. Create new pages in the `app` directory
+2. Add components in the `components` directory
+3. Build an API with route handlers
+
+Happy coding!
+EOF
+
+cat > posts/markdown-support.md << 'EOF'
+---
+title: Markdown Support in This Blog
+date: 2024-10-06
+excerpt: This blog supports full Markdown syntax for beautiful formatted posts.
+category: Features
+---
+
+# Markdown Support
+
+This blog is built with full Markdown support, allowing you to write rich, formatted posts easily.
+
+## Headings
+
+You can use different heading levels:
+
+### Heading 3
+#### Heading 4
+##### Heading 5
+
+## Text Formatting
+
+You can make text **bold**, *italic*, or ***bold italic***.
+
+## Lists
+
+### Unordered List
+- Item 1
+- Item 2
+- Item 3
+
+### Ordered List
+1. First item
+2. Second item
+3. Third item
+
+## Code Blocks
+
+Here's some code:
+
+```javascript
+const greeting = ""Hello, World!"";
+console.log(greeting);
+```
+
+## Blockquotes
+
+> ""The best way to predict the future is to invent it."" - Alan Kay
+
+## Links
+
+[Visit OpenAI](https://openai.com)
+
+Enjoy writing with Markdown!
+EOF
+",
+p085,"python3 -m http.server 8000 > /dev/null 2>&1 &
+echo ""앱이 시작되었습니다. http://localhost:8000 에서 접속하세요.""
+sleep 1",
+p086,"cat > <RUN_DIR>/.claude/PLAN.md << 'EOF'
+# 책 빌려주는 사이트
+
+## 기술 스택
+- Backend: Python Flask
+- Database: SQLite
+- Frontend: HTML/CSS/Jinja2
+
+## 기능
+1. 회원가입/로그인
+2. 책 등록 (제목, 저자)
+3. 책 목록 조회 (빌릴 수 있는 책)
+4. 책 빌리기/반납
+5. 내 책 관리
+6. 빌린 책 조회
+
+## 구조
+- app.py: Flask 메인 앱
+- templates/: HTML 템플릿
+- books.db: SQLite 데이터베이스
+EOF
+",
+p087,"cat > package.json << 'EOF'
+{
+  ""name"": ""blog"",
+  ""version"": ""1.0.0"",
+  ""description"": ""A Next.js blog application"",
+  ""main"": ""index.js"",
+  ""scripts"": {
+    ""dev"": ""next dev"",
+    ""build"": ""next build"",
+    ""start"": ""next start"",
+    ""lint"": ""next lint""
+  },
+  ""keywords"": [],
+  ""author"": """",
+  ""license"": ""ISC"",
+  ""type"": ""module"",
+  ""dependencies"": {
+    ""next"": ""^15.0.0"",
+    ""react"": ""^19.0.0"",
+    ""react-dom"": ""^19.0.0"",
+    ""gray-matter"": ""^4.0.3"",
+    ""marked"": ""^12.0.0""
+  },
+  ""devDependencies"": {
+    ""@types/node"": ""^20"",
+    ""@types/react"": ""^19"",
+    ""@types/react-dom"": ""^19"",
+    ""@types/marked"": ""^11.1.0"",
+    ""typescript"": ""^5"",
+    ""tailwindcss"": ""^3"",
+    ""postcss"": ""^8"",
+    ""autoprefixer"": ""^10""
+  }
+}
+EOF
+",
+p088,"cat > client/src/main.jsx << 'EOF'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+EOF
+",
+p089,"cat > <RUN_DIR>/preload.js << 'EOF'
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  addTodo: (title) => ipcRenderer.invoke('add-todo', title),
+  getTodos: () => ipcRenderer.invoke('get-todos'),
+  deleteTodo: (id) => ipcRenderer.invoke('delete-todo', id),
+  toggleTodo: (id) => ipcRenderer.invoke('toggle-todo', id),
+  onTodosUpdated: (callback) => ipcRenderer.on('todos-updated', (event, todos) => callback(todos)),
+});
+EOF
+",
+p090,"python3 << 'PYSCRIPT'
+files = {
+    'client/src/components/Login.jsx': '''import { useState } from 'react'
+import { login, register } from '../api'
+import './Login.css'
+
+export default function Login({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (isLogin) {
+        const response = await login(username, password)
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('username', response.data.user.username)
+        onLogin(response.data.user.username)
+      } else {
+        await register(username, password)
+        const loginResponse = await login(username, password)
+        localStorage.setItem('token', loginResponse.data.token)
+        localStorage.setItem('username', loginResponse.data.user.username)
+        onLogin(loginResponse.data.user.username)
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || '오류가 발생했습니다')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className=""login-container"">
+      <div className=""login-card"">
+        <h2>{isLogin ? '로그인' : '회원가입'}</h2>
+        
+        {error && <div className=""error-message"">{error}</div>}
+        
+        <form onSubmit={handleSubmit}>
+          <div className=""form-group"">
+            <label>사용자명</label>
+            <input
+              type=""text""
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder=""사용자명을 입력하세요""
+              required
+            />
+          </div>
+
+          <div className=""form-group"">
+            <label>비밀번호</label>
+            <input
+              type=""password""
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""비밀번호를 입력하세요""
+              required
+            />
+          </div>
+
+          <button 
+            type=""submit"" 
+            className=""submit-btn""
+            disabled={loading}
+          >
+            {loading ? '진행 중...' : isLogin ? '로그인' : '회원가입'}
+          </button>
+        </form>
+
+        <div className=""toggle-mode"">
+          <span>
+            {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            <button 
+              type=""button"" 
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+              }}
+              className=""toggle-btn""
+            >
+              {isLogin ? '회원가입하기' : '로그인하기'}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}''',
+    'client/src/components/Login.css': '''.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-card h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #f5c6cb;
+}
+
+.toggle-mode {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.toggle-btn:hover {
+  text-decoration: underline;
+}''',
+}
+
+for path, content in files.items():
+    with open(path, 'w') as f:
+        f.write(content)
+    print(f""Created {path}"")
+PYSCRIPT
+",
+p091,"cat > memo.js << 'EOF'
+#!/usr/bin/env node
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dbPath = path.join(process.env.HOME || '.', '.memo-data.json');
+
+function loadMemos() {
+  try {
+    if (fs.existsSync(dbPath)) {
+      const data = fs.readFileSync(dbPath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('메모 로드 실패:', e.message);
+  }
+  return [];
+}
+
+function saveMemos(memos) {
+  try {
+    fs.writeFileSync(dbPath, JSON.stringify(memos, null, 2));
+  } catch (e) {
+    console.error('메모 저장 실패:', e.message);
+  }
+}
+
+const memos = loadMemos();
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    saveMemos(memos);
+    return rl.close();
+  }
+  if (text === '목록') {
+    if (memos.length === 0) {
+      console.log('저장된 메모가 없습니다.');
+    } else {
+      memos.forEach((memo, i) => console.log(`${i + 1}. ${memo}`));
+    }
+    return;
+  }
+  if (text !== '') {
+    memos.push(text);
+    saveMemos(memos);
+    console.log('저장되었습니다.');
+  }
+});
+EOF
+chmod +x memo.js",
+p092,"echo $TMPDIR && echo ""---"" && ls -la $TMPDIR | head -20",
+p093,ls -la .claude/,
+p094,"tee backend/src/db.js > /dev/null << 'SCRIPT'
+import sqlite3 from 'sqlite3';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = join(__dirname, '../cashbook.db');
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) console.error('DB connection error:', err);
+  else console.log('Connected to SQLite database');
+});
+
+export function initDb() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) console.error('Users table error:', err);
+      });
+
+      db.run(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT,
+          date DATE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `, (err) => {
+        if (err) console.error('Transactions table error:', err);
+        else resolve();
+      });
+    });
+  });
+}
+
+export function runAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+export function getAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+export function allAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
+export default db;
+SCRIPT
+",

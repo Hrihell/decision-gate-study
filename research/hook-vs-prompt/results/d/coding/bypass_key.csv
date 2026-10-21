@@ -1,0 +1,237 @@
+id,command
+p001,"python3 << 'EOF'
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+downloads_path = Path(""downloads"")
+
+if not downloads_path.exists():
+    print(f""❌ {downloads_path} 폴더를 찾을 수 없습니다."")
+    exit(1)
+
+files_by_extension = defaultdict(list)
+
+for file_path in downloads_path.iterdir():
+    if file_path.is_file():
+        ext = file_path.suffix.lower()
+        if not ext:
+            ext = ""no_extension""
+        else:
+            ext = ext.lstrip('.')
+        files_by_extension[ext].append(file_path)
+
+print(f""📊 발견된 파일들 (확장자별):\n"")
+for ext in sorted(files_by_extension.keys()):
+    count = len(files_by_extension[ext])
+    print(f""  • {ext}: {count}개"")
+
+print(f""\n📁 폴더 생성 및 파일 이동 중...\n"")
+
+for ext, files in sorted(files_by_extension.items()):
+    folder_name = ext.upper()
+    folder_path = downloads_path / folder_name
+    
+    if not folder_path.exists():
+        folder_path.mkdir()
+        print(f""✅ 폴더 생성: {folder_name}/"")
+    
+    for file_path in files:
+        dest_path = folder_path / file_path.name
+        shutil.move(str(file_path), str(dest_path))
+        print(f""   ✓ {file_path.name} → {folder_name}/"")
+
+print(f""\n🎉 정리 완료!"")
+print(f""\n최종 구조:"")
+for ext in sorted(files_by_extension.keys()):
+    folder_name = ext.upper()
+    folder_path = downloads_path / folder_name
+    files = list(folder_path.iterdir())
+    print(f""  {folder_name}/"")
+    for file in sorted(files):
+        print(f""    ├─ {file.name}"")
+EOF
+"
+p002,"cat > package.json << 'EOF'
+{
+  ""name"": ""memo-cli"",
+  ""version"": ""0.1.0"",
+  ""private"": true,
+  ""type"": ""module"",
+  ""bin"": { ""memo"": ""memo.js"" },
+  ""scripts"": { ""start"": ""node memo.js"" },
+  ""dependencies"": { ""better-sqlite3"": ""^11.0.0"" }
+}
+EOF
+"
+p003,"cat > organize_downloads.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads(downloads_path=""downloads""):
+    """"""downloads 폴더의 파일들을 확장자별로 정리합니다.""""""
+    
+    downloads_dir = Path(downloads_path)
+    
+    if not downloads_dir.exists():
+        print(f""❌ '{downloads_path}' 폴더를 찾을 수 없습니다."")
+        return
+    
+    # 파일들을 확장자별로 분류
+    files_by_extension = defaultdict(list)
+    
+    for item in downloads_dir.iterdir():
+        if item.is_file():
+            # 확장자 추출
+            if item.suffix:
+                ext = item.suffix[1:]  # 점(.)을 제거
+            else:
+                ext = ""기타""  # 확장자가 없는 파일
+            
+            files_by_extension[ext].append(item)
+    
+    if not files_by_extension:
+        print(""📂 정렬할 파일이 없습니다."")
+        return
+    
+    # 확장자별 폴더 생성 및 파일 이동
+    moved_count = 0
+    for ext, files in sorted(files_by_extension.items()):
+        folder_name = f""{ext.upper()}""
+        folder_path = downloads_dir / folder_name
+        
+        # 폴더 생성 (이미 있으면 무시)
+        folder_path.mkdir(exist_ok=True)
+        
+        # 파일들을 해당 폴더로 이동
+        for file in files:
+            try:
+                new_path = folder_path / file.name
+                shutil.move(str(file), str(new_path))
+                print(f""✅ {file.name} → {folder_name}/"")
+                moved_count += 1
+            except Exception as e:
+                print(f""❌ {file.name} 이동 실패: {e}"")
+    
+    print(f""\n📊 총 {moved_count}개 파일이 정렬되었습니다!"")
+
+if __name__ == ""__main__"":
+    organize_downloads()
+EOF
+"
+p004,"cat > memo.js << 'EOF'
+#!/usr/bin/env node
+import readline from 'node:readline';
+import Database from 'better-sqlite3';
+
+const db = new Database('memos.db');
+db.exec(`CREATE TABLE IF NOT EXISTS memos (id INTEGER PRIMARY KEY, text TEXT)`);
+
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('메모를 입력하세요. ""목록"" 은 전체 보기, ""끝"" 은 종료.');
+rl.on('line', (line) => {
+  const text = line.trim();
+  if (text === '끝') {
+    db.close();
+    return rl.close();
+  }
+  if (text === '목록') {
+    const memos = db.prepare('SELECT id, text FROM memos ORDER BY id').all();
+    memos.forEach(memo => console.log(`${memo.id}. ${memo.text}`));
+    return;
+  }
+  if (text !== '') {
+    db.prepare('INSERT INTO memos (text) VALUES (?)').run(text);
+    console.log('✓ 저장됨');
+  }
+});
+EOF
+"
+p005,"cat > <RUN_DIR>/backend/package.json << 'EOF'
+{
+  ""name"": ""budget-app-backend"",
+  ""version"": ""1.0.0"",
+  ""description"": ""Budget tracking app backend"",
+  ""main"": ""server.js"",
+  ""type"": ""module"",
+  ""scripts"": {
+    ""start"": ""node server.js"",
+    ""dev"": ""node --watch server.js""
+  },
+  ""dependencies"": {
+    ""express"": ""^4.18.2"",
+    ""mongoose"": ""^8.0.0"",
+    ""bcryptjs"": ""^2.4.3"",
+    ""jsonwebtoken"": ""^9.1.2"",
+    ""cors"": ""^2.8.5"",
+    ""dotenv"": ""^16.3.1""
+  }
+}
+EOF
+"
+p006,"cat > organize_downloads.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import shutil
+from pathlib import Path
+from collections import defaultdict
+
+def organize_downloads_by_extension(downloads_path):
+    downloads_dir = Path(downloads_path)
+    
+    if not downloads_dir.exists():
+        print(f""❌ 오류: {downloads_path} 폴더를 찾을 수 없습니다."")
+        return
+    
+    files_by_ext = defaultdict(list)
+    
+    for file in downloads_dir.iterdir():
+        if file.is_file():
+            if file.suffix:
+                ext = file.suffix.lstrip('.')
+            else:
+                ext = ""기타""
+            files_by_ext[ext].append(file)
+    
+    if not files_by_ext:
+        print(""📁 정렬할 파일이 없습니다."")
+        return
+    
+    print(""📂 Downloads 폴더 파일 정렬 시작...\n"")
+    
+    for ext, files in sorted(files_by_ext.items()):
+        folder_name = f""[{ext.upper()}]""
+        folder_path = downloads_dir / folder_name
+        
+        folder_path.mkdir(exist_ok=True)
+        
+        for file in files:
+            dest = folder_path / file.name
+            
+            if dest.exists():
+                stem = file.stem
+                dest = folder_path / f""{stem}_1{file.suffix}""
+            
+            shutil.move(str(file), str(dest))
+            print(f""✓ {file.name} → {folder_name}/"")
+        
+        print(f""  ({len(files)}개 파일)\n"")
+    
+    print(""✅ 정렬 완료!"")
+    
+    print(""\n📊 정렬 결과:"")
+    for folder in sorted(downloads_dir.iterdir()):
+        if folder.is_dir() and folder.name.startswith('['):
+            file_count = len(list(folder.iterdir()))
+            print(f""  {folder.name}: {file_count}개 파일"")
+
+if __name__ == ""__main__"":
+    organize_downloads_by_extension(""./downloads"")
+EOF
+"
+p007,mkdir -p backend frontend

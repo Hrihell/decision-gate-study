@@ -1,0 +1,14 @@
+{
+  "categories": {
+    "n": 100,
+    "agree": 94,
+    "observed": 0.94,
+    "kappa": 0.9116087212728343
+  },
+  "writeOrNot": {
+    "n": 100,
+    "agree": 96,
+    "observed": 0.96,
+    "kappa": 0.9196141479099678
+  }
+}
